@@ -1,12 +1,12 @@
 module Column : sig
-  type 'a t
+  type ('a, 'tbl) t
   type name
 
-  val name : 'a t -> name
-  val to_string : 'a t -> string
+  val name : ('a, 'tbl) t -> name
+  val to_string : ('a, 'tbl) t -> string
   val field_concat : name list -> string
-  val mk_string : string -> string t
-  val mk_int : string -> int t
+  val mk_string : 'tbl -> string -> (string, 'tbl) t
+  val mk_int : 'tbl string -> (int, 'tbl) t
 end = struct
   type name = string
 
@@ -28,32 +28,6 @@ end = struct
   let mk_string x = STRING x
   let mk_int x = INTEGER x
 end
-
-module ColumnList = struct
-  type 'a t =
-    | [] : unit t
-    | ( :: ) : ('a Column.t * 'b t) -> ('a * 'b) t
-end
-
-let user =
-  object
-    method table : [ `user ] = `user
-    method table_name = "user"
-    method id = Column.mk_int "user.id"
-    method name = Column.mk_string "user.name"
-  end
-;;
-
-let post =
-  object
-    method table : [ `post ] = `post
-    method table_name = "post"
-    method id = Column.mk_string "post.id"
-    method user_id = Column.mk_string "post.user_id"
-    method title = Column.mk_string "post.title"
-    method views = Column.mk_int "post.views"
-  end
-;;
 
 module Value = struct
   type 'a t =
@@ -94,42 +68,39 @@ module Expr = struct
   ;;
 end
 
+module ColumnList = struct
+  type 'a column_list =
+    | [] : unit column_list
+    | ( :: ) : ('a Column.t * 'b column_list) -> ('a * 'b) column_list
+
+  type t = COLUMNS : 'a column_list -> t
+
+  let empty () = COLUMNS []
+
+  let rec to_names t =
+    let rec aux : 'a. 'a column_list -> string list -> string list =
+      fun (type a) (t : a column_list) (acc : string list) : string list ->
+      match t with
+      | [] -> acc
+      | x :: xs -> aux xs (Column.to_string x :: acc)
+    in
+    match t with
+    | COLUMNS t -> aux t []
+  ;;
+end
+
 type 'a query =
   | FROM : string * 'a -> 'a query
   | JOIN : 'a query * 'b query * ('a * 'b -> 'expr Expr.t) -> ('a * 'b) query
-  | SELECT : 'a query * ('a -> Column.name list) -> 'a query
+  | SELECT : 'a query * ('a -> _ ColumnList.column_list) -> 'a query
 
 let from table = FROM (table#table_name, table)
 let join from joined expr = JOIN (from, joined, expr)
-let from_user = from user
-let from_post = from post
-let selected = SELECT (from_user, fun x -> [ Column.name x#id ])
-
-(* let joined = *)
-(*   let open Expr in *)
-(*   (* join from_user from_post [%sql user#id = post#user_id] *) *)
-(*   join from_user from_post (fun (user, post) -> c user#id = c post#user_id) *)
-(* ;; *)
-
-let joined =
-  let open Expr in
-  join from_user from_post (fun (user, post) -> c user#id = i 5)
-;;
-
-(* let joined = *)
-(*   let open Expr in *)
-(*   join from_user from_post (fun (user, _) -> c user#id <> s "teej-dv") *)
-(* ;; *)
-
-let selected_joined =
-  SELECT
-    ( joined
-    , fun (user, post) -> [ post#title; user#name ] |> List.map Column.name )
-;;
+let select fields query = SELECT (query, fields)
 
 type request =
   { name : string
-  ; fields : Column.name list
+  ; fields : ColumnList.t
   ; join : (string * string) list
   }
 
@@ -145,7 +116,7 @@ let rec build_request_tables : 'a. 'a query -> 'a =
 let rec build_request_type : 'a. 'a query -> request =
   fun (type a) (query : a query) : request ->
   match query with
-  | FROM (name, table) -> { name; fields = ColumnList.[]; join = [] }
+  | FROM (name, table) -> { name; fields = ColumnList.empty (); join = [] }
   | JOIN (from, joined, cond) ->
     let expr = cond (build_request_tables from, build_request_tables joined) in
     let expr = Expr.to_string expr in
@@ -154,8 +125,9 @@ let rec build_request_type : 'a. 'a query -> request =
     { from with join = [ join.name, expr ] }
   | SELECT (from, f) ->
     let tables = build_request_tables from in
-    let fields = f tables in
     let from = build_request_type from in
+    let fields = f tables in
+    let fields = ColumnList.COLUMNS fields in
     { name = from.name; fields; join = from.join }
 ;;
 
@@ -164,8 +136,8 @@ let build_request : 'a. 'a query -> string =
   let request = build_request_type query in
   let fields =
     match request.fields with
-    | [] -> "*"
-    | fields -> Column.field_concat fields
+    | ColumnList.COLUMNS [] -> "*"
+    | fields -> ColumnList.to_names request.fields |> String.concat ", "
   in
   let join =
     match request.join with
@@ -175,4 +147,45 @@ let build_request : 'a. 'a query -> string =
     | _ -> assert false
   in
   Format.sprintf "SELECT %s\n  FROM %s %s" fields request.name join
+;;
+
+let user =
+  object
+    method table : [ `user ] = `user
+    method table_name = "user"
+    method id = Column.mk_int "user.id"
+    method name = Column.mk_string "user.name"
+  end
+;;
+
+let post =
+  object
+    method table : [ `post ] = `post
+    method table_name = "post"
+    method id = Column.mk_string "post.id"
+    method user_id = Column.mk_int "post.user_id"
+    method title = Column.mk_string "post.title"
+    method views = Column.mk_int "post.views"
+  end
+;;
+
+let select_id = select (fun tbl -> ColumnList.[ tbl#id ])
+let select_name = select (fun tbl -> ColumnList.[ tbl#name ])
+
+(* SELECT user.name
+   FROM user *)
+let user_query = from user |> select_id
+let user_name_query = from user |> select_name
+let spelled_out = from user |> select (fun tbl -> ColumnList.[ post#id ])
+(* let post_name_query = from post |> select_name *)
+
+(* SELECT user.name, post.title, user.id
+   FROM user
+   INNER JOIN post ON user.id = 7 *)
+let query =
+  let open Expr in
+  let from_user = from user in
+  let from_post = from post in
+  let joined = join from_user from_post (fun (user, post) -> c user#id = i 7) in
+  select (fun (user, post) -> [ user#id; post#title; user#name ]) joined
 ;;

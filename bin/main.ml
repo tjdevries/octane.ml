@@ -2,9 +2,9 @@ open Octane.Schema4
 
 let () =
   Format.printf "Hello, World!@.";
-  Format.printf "Request:@.%s@.@." (build_request from_user);
-  Format.printf "Request:@.%s@.@." (build_request selected);
-  Format.printf "Request:@.%s@.@." (build_request selected_joined);
+  Format.printf "User    Request:@.%s@.@." (build_request user_query);
+  Format.printf "Spelled Request:@.%s@.@." (build_request spelled_out);
+  Format.printf "Query   Request:@.%s@.@." (build_request query);
   ()
 ;;
 
