@@ -72,17 +72,22 @@ module Expr = struct
 end
 
 module ColumnList = struct
-  type 'a column_list =
-    | [] : unit column_list
-    | ( :: ) : (('a, 'c) Column.t * 'b column_list) -> ('a * 'b) column_list
+  type ('a, 'b) column_list =
+    | [] : (unit, 'b) column_list
+    | ( :: ) :
+        (('a, 'tbl) Column.t * ('b, 'tbl) column_list)
+        -> ('a * 'b, 'tbl) column_list
 
-  type t = COLUMNS : 'a column_list -> t
+  type t = COLUMNS : ('a, 'tbl) column_list -> t
 
   let empty () = COLUMNS []
 
   let rec to_names t =
-    let rec aux : 'a. 'a column_list -> string list -> string list =
-      fun (type a) (t : a column_list) (acc : string list) : string list ->
+    let rec aux : 'a 'tbl. ('a, 'tbl) column_list -> string list -> string list =
+      fun (type a tbl)
+        (t : (a, tbl) column_list)
+        (acc : string list)
+        : string list ->
       match t with
       | [] -> List.rev acc
       | x :: xs -> aux xs (Column.to_string x :: acc)
@@ -98,7 +103,7 @@ type ('a, 'tbl) query =
       ('a, 't1) query * ('b, 't2) query * ('a * 'b -> 'expr Expr.t)
       -> ('a * 'b, 't1 * 't2) query
   | SELECT :
-      ('a, 'tbl) query * ('a -> 'tbl ColumnList.column_list)
+      ('a, 'tbl) query * ('a -> (_, 'tbl) ColumnList.column_list)
       -> ('a, 'tbl) query
 
 let from table = FROM (table#table_name, table, table#table)
@@ -111,19 +116,19 @@ type request =
   ; join : (string * string) list
   }
 
-let rec build_request_tables : 'a. 'a query -> 'a =
-  fun (type a) (query : a query) : a ->
+let rec build_request_tables : 'a 'b. ('a, 'b) query -> 'a =
+  fun (type a b) (query : (a, b) query) : a ->
   match query with
-  | FROM (_, table) -> table
+  | FROM (_, table, _) -> table
   | JOIN (from, joined, _) ->
     build_request_tables from, build_request_tables joined
   | _ -> assert false
 ;;
 
-let rec build_request_type : 'a. 'a query -> request =
-  fun (type a) (query : a query) : request ->
+let rec build_request_type : 'a 'b. ('a, 'b) query -> request =
+  fun (type a b) (query : (a, b) query) : request ->
   match query with
-  | FROM (name, table) -> { name; fields = ColumnList.empty (); join = [] }
+  | FROM (name, table, _) -> { name; fields = ColumnList.empty (); join = [] }
   | JOIN (from, joined, cond) ->
     let expr = cond (build_request_tables from, build_request_tables joined) in
     let expr = Expr.to_string expr in
@@ -138,8 +143,8 @@ let rec build_request_type : 'a. 'a query -> request =
     { name = from.name; fields; join = from.join }
 ;;
 
-let build_request : 'a. 'a query -> string =
-  fun (type a) (query : a query) : string ->
+let build_request : 'a 'b. ('a, 'b) query -> string =
+  fun (type a b) (query : (a, b) query) : string ->
   let request = build_request_type query in
   let fields =
     match request.fields with
@@ -183,12 +188,12 @@ let example x =
   | `user -> "user"
 ;;
 
-let select_id = select (fun tbl -> ColumnList.[ tbl#id; tbl#name; post#id ])
+(* let select_id = select (fun tbl -> ColumnList.[ tbl#id; tbl#name; post#id ]) *)
 (* let select_name = select (fun tbl -> ColumnList.[ tbl#name ]) *)
 
 (* SELECT user.name
    FROM user *)
-let user_query = from user |> select_id
+(* let user_query = from user |> select_id *)
 
 (* let user_name_query = from user |> select_name *)
 let spelled_out = from user |> select (fun user -> ColumnList.[ user#id ])
