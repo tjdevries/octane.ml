@@ -6,32 +6,35 @@ module Column : sig
   val to_string : ('a, 'tbl) t -> string
   val field_concat : name list -> string
   val mk_string : 'tbl -> string -> (string, 'tbl) t
-  val mk_int : 'tbl string -> (int, 'tbl) t
+  val mk_int : 'tbl -> string -> (int, 'tbl) t
 end = struct
   type name = string
 
-  type 'a t =
-    | STRING : name -> string t
-    | INTEGER : name -> int t
+  type ('a, 'tbl) t =
+    | STRING : 'tbl * name -> (string, 'tbl) t
+    | INTEGER : 'tbl * name -> (int, 'tbl) t
 
-  let name : 'a. 'a t -> name =
-    fun (type a) (x : a t) : name ->
+  let name : 'a 'b. ('a, 'b) t -> name =
+    fun (type a b) (x : (a, b) t) : name ->
     match x with
-    | STRING x -> x
-    | INTEGER x -> x
+    | STRING (_, x) -> x
+    | INTEGER (_, x) -> x
   ;;
 
-  let to_string : 'a. 'a t -> string = fun (type a) (x : a t) : string -> name x
+  let to_string : 'a 'b. ('a, 'b) t -> string =
+    fun (type a b) (x : (a, b) t) : string -> name x
+  ;;
+
   let field_concat xs = String.concat ", " xs
 
   (* Make columns *)
-  let mk_string x = STRING x
-  let mk_int x = INTEGER x
+  let mk_string tbl x = STRING (tbl, x)
+  let mk_int tbl x = INTEGER (tbl, x)
 end
 
 module Value = struct
   type 'a t =
-    | FIELD : 'a Column.t -> 'a t
+    | FIELD : ('a, 'b) Column.t -> 'a t
     | STRING : string -> string t
     | INTEGER : int -> int t
 
@@ -71,7 +74,7 @@ end
 module ColumnList = struct
   type 'a column_list =
     | [] : unit column_list
-    | ( :: ) : ('a Column.t * 'b column_list) -> ('a * 'b) column_list
+    | ( :: ) : (('a, 'c) Column.t * 'b column_list) -> ('a * 'b) column_list
 
   type t = COLUMNS : 'a column_list -> t
 
@@ -150,32 +153,40 @@ let build_request : 'a. 'a query -> string =
 ;;
 
 let user =
-  object
+  object (self)
+    (* method table = `user *)
     method table : [ `user ] = `user
     method table_name = "user"
-    method id = Column.mk_int "user.id"
-    method name = Column.mk_string "user.name"
+    method id = Column.mk_int self#table "user.id"
+    method name = Column.mk_string self#table "user.name"
   end
 ;;
 
 let post =
-  object
+  object (self)
     method table : [ `post ] = `post
     method table_name = "post"
-    method id = Column.mk_string "post.id"
-    method user_id = Column.mk_int "post.user_id"
-    method title = Column.mk_string "post.title"
-    method views = Column.mk_int "post.views"
+    method id = Column.mk_string self#table "post.id"
+    method user_id = Column.mk_int self#table "post.user_id"
+    method title = Column.mk_string self#table "post.title"
+    method views = Column.mk_int self#table "post.views"
   end
 ;;
 
+let example x =
+  match x#table with
+  | `post -> "post"
+  | `user -> "user"
+;;
+
 let select_id = select (fun tbl -> ColumnList.[ tbl#id ])
-let select_name = select (fun tbl -> ColumnList.[ tbl#name ])
+(* let select_name = select (fun tbl -> ColumnList.[ tbl#name ]) *)
 
 (* SELECT user.name
    FROM user *)
 let user_query = from user |> select_id
-let user_name_query = from user |> select_name
+
+(* let user_name_query = from user |> select_name *)
 let spelled_out = from user |> select (fun tbl -> ColumnList.[ post#id ])
 (* let post_name_query = from post |> select_name *)
 
