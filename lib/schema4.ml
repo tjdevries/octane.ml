@@ -84,7 +84,7 @@ module ColumnList = struct
     let rec aux : 'a. 'a column_list -> string list -> string list =
       fun (type a) (t : a column_list) (acc : string list) : string list ->
       match t with
-      | [] -> acc
+      | [] -> List.rev acc
       | x :: xs -> aux xs (Column.to_string x :: acc)
     in
     match t with
@@ -92,12 +92,16 @@ module ColumnList = struct
   ;;
 end
 
-type 'a query =
-  | FROM : string * 'a -> 'a query
-  | JOIN : 'a query * 'b query * ('a * 'b -> 'expr Expr.t) -> ('a * 'b) query
-  | SELECT : 'a query * ('a -> _ ColumnList.column_list) -> 'a query
+type ('a, 'tbl) query =
+  | FROM : string * 'a * 'tbl -> ('a, 'tbl) query
+  | JOIN :
+      ('a, 't1) query * ('b, 't2) query * ('a * 'b -> 'expr Expr.t)
+      -> ('a * 'b, 't1 * 't2) query
+  | SELECT :
+      ('a, 'tbl) query * ('a -> 'tbl ColumnList.column_list)
+      -> ('a, 'tbl) query
 
-let from table = FROM (table#table_name, table)
+let from table = FROM (table#table_name, table, table#table)
 let join from joined expr = JOIN (from, joined, expr)
 let select fields query = SELECT (query, fields)
 
@@ -179,7 +183,7 @@ let example x =
   | `user -> "user"
 ;;
 
-let select_id = select (fun tbl -> ColumnList.[ tbl#id ])
+let select_id = select (fun tbl -> ColumnList.[ tbl#id; tbl#name; post#id ])
 (* let select_name = select (fun tbl -> ColumnList.[ tbl#name ]) *)
 
 (* SELECT user.name
@@ -187,7 +191,7 @@ let select_id = select (fun tbl -> ColumnList.[ tbl#id ])
 let user_query = from user |> select_id
 
 (* let user_name_query = from user |> select_name *)
-let spelled_out = from user |> select (fun tbl -> ColumnList.[ post#id ])
+let spelled_out = from user |> select (fun user -> ColumnList.[ user#id ])
 (* let post_name_query = from post |> select_name *)
 
 (* SELECT user.name, post.title, user.id
