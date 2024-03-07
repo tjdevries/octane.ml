@@ -1,23 +1,28 @@
 module Column : sig
   type 'a t
+  type name
 
-  val value : 'a t -> string
-  val field_concat : 'a t list -> string
+  val name : 'a t -> name
+  val to_string : 'a t -> string
+  val field_concat : name list -> string
   val mk_string : string -> string t
   val mk_int : string -> int t
 end = struct
-  type 'a t =
-    | STRING : string -> string t
-    | INTEGER : string -> int t
+  type name = string
 
-  let value : 'a. 'a t -> string =
-    fun (type a) (x : a t) : string ->
+  type 'a t =
+    | STRING : name -> string t
+    | INTEGER : name -> int t
+
+  let name : 'a. 'a t -> name =
+    fun (type a) (x : a t) : name ->
     match x with
     | STRING x -> x
     | INTEGER x -> x
   ;;
 
-  let field_concat xs = String.concat ", " (List.map value xs)
+  let to_string : 'a. 'a t -> string = fun (type a) (x : a t) : string -> name x
+  let field_concat xs = String.concat ", " xs
 
   (* Make columns *)
   let mk_string x = STRING x
@@ -34,7 +39,7 @@ let user =
   object
     method table : [ `user ] = `user
     method table_name = "user"
-    method id = Column.mk_string "user.id"
+    method id = Column.mk_int "user.id"
     method name = Column.mk_string "user.name"
   end
 ;;
@@ -59,7 +64,7 @@ module Value = struct
   let to_string : 'a. 'a t -> string =
     fun (type a) (t : a t) : string ->
     match t with
-    | FIELD x -> Column.value x
+    | FIELD x -> Column.to_string x
     | STRING x -> Format.sprintf "%S" x
     | INTEGER x -> Format.sprintf "%d" x
   ;;
@@ -89,28 +94,26 @@ module Expr = struct
   ;;
 end
 
-type ('a, 'b) query =
-  | FROM : string * 'a -> ('a, unit) query
-  | JOIN :
-      ('a, _) query * ('b, _) query * ('a * 'b -> 'expr Expr.t)
-      -> ('a * 'b, unit) query
-  | SELECT : ('a, _) query * ('a -> 'b ColumnList.t) -> ('a, 'b) query
+type 'a query =
+  | FROM : string * 'a -> 'a query
+  | JOIN : 'a query * 'b query * ('a * 'b -> 'expr Expr.t) -> ('a * 'b) query
+  | SELECT : 'a query * ('a -> Column.name list) -> 'a query
 
 let from table = FROM (table#table_name, table)
 let join from joined expr = JOIN (from, joined, expr)
 let from_user = from user
 let from_post = from post
-let selected = SELECT (from_user, fun x -> [ x#id ])
+let selected = SELECT (from_user, fun x -> [ Column.name x#id ])
+
+(* let joined = *)
+(*   let open Expr in *)
+(*   (* join from_user from_post [%sql user#id = post#user_id] *) *)
+(*   join from_user from_post (fun (user, post) -> c user#id = c post#user_id) *)
+(* ;; *)
 
 let joined =
   let open Expr in
-  (* join from_user from_post [%sql user#id = post#user_id] *)
-  join from_user from_post (fun (user, post) -> c user#id = c post#user_id)
-;;
-
-let joined =
-  let open Expr in
-  join from_user from_post (fun (user, post) -> c user#id = s "hi")
+  join from_user from_post (fun (user, post) -> c user#id = i 5)
 ;;
 
 (* let joined = *)
@@ -119,17 +122,19 @@ let joined =
 (* ;; *)
 
 let selected_joined =
-  SELECT (joined, fun (user, post) -> [ post#title; user#name ])
+  SELECT
+    ( joined
+    , fun (user, post) -> [ post#title; user#name ] |> List.map Column.name )
 ;;
 
-type 'a request =
+type request =
   { name : string
-  ; fields : 'a ColumnList.t
+  ; fields : Column.name list
   ; join : (string * string) list
   }
 
-let rec build_request_tables : 'a. ('a, _) query -> 'a =
-  fun (type a) (query : (a, _) query) : a ->
+let rec build_request_tables : 'a. 'a query -> 'a =
+  fun (type a) (query : a query) : a ->
   match query with
   | FROM (_, table) -> table
   | JOIN (from, joined, _) ->
@@ -137,8 +142,8 @@ let rec build_request_tables : 'a. ('a, _) query -> 'a =
   | _ -> assert false
 ;;
 
-let rec build_request_type : 'a 'b. ('a, 'b) query -> 'b request =
-  fun (type a b) (query : (a, b) query) : b request ->
+let rec build_request_type : 'a. 'a query -> request =
+  fun (type a) (query : a query) : request ->
   match query with
   | FROM (name, table) -> { name; fields = ColumnList.[]; join = [] }
   | JOIN (from, joined, cond) ->
@@ -146,7 +151,7 @@ let rec build_request_type : 'a 'b. ('a, 'b) query -> 'b request =
     let expr = Expr.to_string expr in
     let from = build_request_type from in
     let join = build_request_type joined in
-    { from with join = [ join.name, expr ] @ join.join }
+    { from with join = [ join.name, expr ] }
   | SELECT (from, f) ->
     let tables = build_request_tables from in
     let fields = f tables in
