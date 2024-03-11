@@ -78,7 +78,9 @@ module ColumnList = struct
         (('a, 'tbl) Column.t * ('b, 'tbl) column_list)
         -> ('a * 'b, 'tbl) column_list
 
+  (* TODO: HERES MY IDEA, PUT A NEW PACKED TYPED HERE *)
   type t = COLUMNS : ('a, 'tbl) column_list -> t
+  (* | JOINED : ('a, 'tbl) column_list * ('b, 'tbl) column_list -> t *)
 
   let empty () = COLUMNS []
 
@@ -97,16 +99,12 @@ module ColumnList = struct
   ;;
 end
 
-type ('a, 'tbl) query =
-  | FROM : string * 'a * 'tbl -> ('a, 'tbl) query
-  | JOIN :
-      ('a, 't1) query * ('b, 't2) query * ('a * 'b -> 'expr Expr.t)
-      -> ('a * 'b, 't1 * 't2) query
-  | SELECT :
-      ('a, 'tbl) query * ('a -> (_, 'tbl) ColumnList.column_list)
-      -> ('a, 'tbl) query
+type 'a query =
+  | FROM : string * 'a -> 'a query
+  | JOIN : 'a query * 'b query * ('a * 'b -> 'expr Expr.t) -> ('a * 'b) query
+  | SELECT : 'a query * ('a -> _ ColumnList.column_list) -> 'a query
 
-let from table = FROM (table#table_name, table, table#table)
+let from table = FROM (table#table_name, table)
 let join from joined expr = JOIN (from, joined, expr)
 let select fields query = SELECT (query, fields)
 
@@ -206,6 +204,8 @@ let query =
   let open Expr in
   let from_user = from user in
   let from_post = from post in
-  let joined = join from_user from_post (fun (user, post) -> c user#id = i 7) in
+  let joined =
+    join from_user from_post (fun (user, post) -> c user#id = c post#user_id)
+  in
   select (fun (user, post) -> [ user#id; post#title; user#name ]) joined
 ;;
