@@ -1,4 +1,4 @@
 (executable
  (public_name octane)
  (name main)
- (libraries octane))
+ (libraries octane caqti caqti-dynload caqti.blocking))

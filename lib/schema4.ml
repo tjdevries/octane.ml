@@ -5,6 +5,15 @@ type sql_float = [ `float ]
 type sql_int = [ `int ]
 type sql_bool = [ `bool ]
 
+type sql_type =
+  [ sql_string
+  | sql_bytes
+  | sql_blob
+  | sql_float
+  | sql_int
+  | sql_bool
+  ]
+
 type sql_numeric =
   [ sql_float
   | sql_int
@@ -19,8 +28,11 @@ type sql_textual =
 (* hey idiot, don't forget that you want to insert into the database. it's kind
    of a key feature of the whole database thing. like the data part. *)
 module Column : sig
-  type 'a t
   type name
+
+  type 'a t =
+    | STRING : name -> sql_string t
+    | INTEGER : name -> sql_int t
 
   val name : 'a t -> name
   val to_string : 'a t -> string
@@ -57,34 +69,55 @@ module Expr = struct
       | Float : float -> sql_float t
       | Bool : bool -> sql_bool t
 
+    let to_type : 'a. 'a t -> 'a =
+      fun (type a) (t : a t) : a ->
+      match t with
+      | String _ -> `string
+      | Integer _ -> `int
+      | Float _ -> `float
+      | Bool _ -> `bool
+    ;;
+
     let to_string : 'a. 'a t -> string =
       fun (type a) (t : a t) : string ->
       match t with
-      | String str -> Format.sprintf "%S" str
+      | String str ->
+        (* TODO: Escape sql injection here *)
+        Format.sprintf "%S" str
       | Integer int -> Format.sprintf "%d" int
       | Float float -> Format.sprintf "%f" float
       | Bool bool -> Format.sprintf "%b" bool
     ;;
   end
 
+  (* I wonder if this should have two types...
+     Primitive types then just always match both types,
+     but functions may need to store the type so that I can do something
+     with it later. Just a lot of annoyingness to do this. *)
   type 'a t =
     | Primitive : 'a Primitive.t -> 'a t
     | Column : 'a Column.t -> 'a t
     | Binary : ('left t * string * 'right t) -> 'a t
     | Unary : (string * _ t) -> 'a t
+    | Postary : (string * _ t) -> 'a t
     | Fn : (string * _ t) -> 'a t
     | Tuple : ('a t * 'b t) -> ('a * 'b) t
 
-  let equals (type a) (x : a t) (y : a t) : bool t = Binary (x, "=", y)
-  let not_equals (type a) (x : a t) (y : a t) : bool t = Binary (x, "<>", y)
-  let greater_than (type a) (x : a t) (y : a t) : bool t = Binary (x, ">", y)
-  let less_than (type a) (x : a t) (y : a t) : bool t = Binary (x, "<", y)
+  let equals (type a) (x : a t) (y : a t) : sql_bool t = Binary (x, "=", y)
+  let not_equals (type a) (x : a t) (y : a t) : sql_bool t = Binary (x, "<>", y)
+  let greater_than (type a) (x : a t) (y : a t) : sql_bool t = Binary (x, ">", y)
+  let less_than (type a) (x : a t) (y : a t) : sql_bool t = Binary (x, "<", y)
+  let not_null x : sql_bool t = Postary ("IS NOT NULL", x)
+  let and_ x y : sql_bool t = Binary (x, "AND", y)
+  let or_ x y : sql_bool t = Binary (x, "OR", y)
 
   (* Operators *)
   let ( = ) x y = equals x y
   let ( <> ) x y = not_equals x y
   let ( > ) x y = greater_than x y
   let ( < ) x y = less_than x y
+  let ( && ) x y = and_ x y
+  let ( || ) x y = or_ x y
 
   (* Shorthands *)
   let c x = Column x
@@ -102,15 +135,24 @@ module Expr = struct
     Fn ("POWER", Tuple (base, exponent))
   ;;
 
+  let to_type t =
+    match t with
+    | Primitive expr -> Primitive.to_type expr
+    (* TODO: Don't even know if this is possible... *)
+    | _ -> assert false
+  ;;
+
   let rec to_string : 'a. 'a t -> string =
     fun (type a) (t : a t) : string ->
     match t with
     | Binary (left, operator, right) ->
       let left = to_string left in
       let right = to_string right in
-      Format.sprintf "%s %s %s" left operator right
+      Format.sprintf "(%s) %s (%s)" left operator right
     | Unary (operator, right) ->
       Format.sprintf "%s %s" operator (to_string right)
+    | Postary (operator, right) ->
+      Format.sprintf "%s %s" (to_string right) operator
     | Primitive expr -> Primitive.to_string expr
     | Column x -> Column.to_string x
     | Fn (fn, expr) -> Format.sprintf "%s(%s)" fn (to_string expr)
@@ -140,15 +182,30 @@ module ExprList = struct
     match t with
     | COLUMNS t -> aux t []
   ;;
-end
 
-type 'a query_from = ..
-type 'a query_join = ..
+  let rec to_types : 'a. 'a items -> 'a =
+    fun (type a) (t : a items) : a ->
+    (* let rec aux : 'a 'b. ('a * 'b) items -> 'b list -> 'a * 'b = *)
+    (*   fun (type a b) (t : (a * b) items) (acc : b) : a -> *)
+    (*   match t with *)
+    (*   | [] -> acc *)
+    (*   | x :: xs -> aux xs (Expr.to_string x :: acc) *)
+    (* in *)
+    let rec aux : 'a. 'a items -> 'a =
+      fun (type a) (t : a items) : a ->
+      match t with
+      | [] -> ()
+      | x :: [] -> Expr.to_type x, ()
+      | x :: xs -> Expr.to_type x, aux xs
+    in
+    aux t
+  ;;
+end
 
 (* need to track our "selected" values *)
 type 'a query =
   | FROM : string * 'a -> 'a query
-  | JOIN : 'a query * 'b query * ('a * 'b -> _ Expr.t) -> ('a * 'b) query
+  | JOIN : 'a query * 'b query * ('a * 'b -> sql_bool Expr.t) -> ('a * 'b) query
   | SELECT : 'a query * ('a -> _ ExprList.items) -> 'a query
   | WHERE : 'a query * ('a -> _ Expr.t) -> 'a query
 
@@ -221,15 +278,18 @@ let build_request : 'a. 'a query -> string =
   Format.sprintf "SELECT %s\n  FROM %s %s%s" fields request.name join where
 ;;
 
-let user =
+class user_table =
   object (self)
-    (* method table = `user *)
-    method table : [ `user ] = `user
+    method private table : [ `user ] = `user
     method table_name = "user"
     method id = Expr.c @@ Column.mk_int self#table "user.id"
     method name = Expr.c @@ Column.mk_string self#table "user.name"
+
+    (* Auto generated fields *)
+    method fields = ExprList.[ self#id; self#name ]
   end
-;;
+
+let user = new user_table
 
 (* THIS WILL BE GENERATED VIA PPX FROM YOUR RECORD (OR SIMILAR) *)
 type post =
@@ -240,17 +300,19 @@ type post =
   }
 [@@deriving octane]
 
-let post =
+class post_table =
   object (self)
-    method table : [ `post ] = `post
+    method private table : [ `post ] = `post
     method table_name = "post"
     method id = Expr.c @@ Column.mk_string self#table "post.id"
     method user_id = Expr.c @@ Column.mk_int self#table "post.user_id"
     method title = Expr.c @@ Column.mk_string self#table "post.title"
     method views = Expr.c @@ Column.mk_int self#table "post.views"
   end
-;;
 
+let post = new post_table
+
+(* Some example queries *)
 let spelled_out = from user |> select (fun user -> ExprList.[ user#id ])
 let example = Expr.Tuple Expr.(s "hello", Tuple (s "wow", i 1))
 

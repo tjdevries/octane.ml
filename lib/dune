@@ -1,2 +1,3 @@
 (library
- (name octane))
+ (name octane)
+ (libraries caqti caqti-driver-sqlite3))

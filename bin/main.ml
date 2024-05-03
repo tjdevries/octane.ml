@@ -8,55 +8,74 @@ let () =
   ()
 ;;
 
-(* let () = print_endline "Hello, World!" *)
-(**)
-(* type t = *)
-(*   { twitch_user_id : string [@primary] *)
-(*   ; twitch_display_name : string *)
-(*   ; twitch_profile_url : string option [@default None] *)
-(*   } *)
-(* (* [@@deriving combust ~name:"users"] *) *)
-(**)
-(* module MySchema = struct *)
-(*   open Octane.Schema *)
-(**)
-(*   let table, columns = assert false *)
-(*   (* create_table "users" `users (fun table -> *) *)
-(*   (*   Octane.Type. *) *)
-(*   (*     [ column ~primary_key:true table "twitch_user_id" int *) *)
-(*   (*     ; column table "twitch_display_name" text *) *)
-(*   (*     ; column table "twitch_profile_url" (null text) *) *)
-(*   (*     ]) *) *)
-(* end *)
-(**)
-(* module Query = struct *)
-(*   let find_one db = *)
-(*     (* Octane.query | SELECT { ... } *) *)
-(*     (* "select twitch_user_id, twitch_display_name, twitch_profile_url from users" *) *)
-(*     let select = Octane.Query.select ~table:MySchema.table MySchema.columns in *)
-(*     (* Octane.request | ('a, [`One]) *) *)
-(*     let request = Octane.Request.make_one select in *)
-(*     (* ('a, error) result *) *)
-(*     (* Expr.t *) *)
-(*     let result = Octane.Db.find request db in *)
-(*     (* TODO: Could do find_map, find_opt, etc. that could be really helpful *) *)
-(*     let _ = result in *)
-(*     (* let filter_value = *) *)
-(*     (*   Expr.( *) *)
-(*     (*     Fields.twitch_id = string twitch_id *) *)
-(*     (*     && Fields.twitch_display_name = string "teej_dv") *) *)
-(*     (* in *) *)
-(*     () *)
-(*   ;; *)
-(* end *)
-(**)
-(* open Octane *)
-(**)
-(* let () = *)
-(*   let other_columns = Schema.[ column "foo" text ] in *)
-(*   let select = Query.select ~table:MySchema.table other_columns in *)
-(*   Format.printf "%a@." Octane.Query.pp_query select; *)
-(*   Format.printf "@.NOW WITH LIMIT:@."; *)
-(*   let select = Query.limit ~limit:10 select in *)
-(*   Format.printf "%a@." Octane.Query.pp_query select *)
-(* ;; *)
+let () =
+  Format.printf "Schema 5!@.";
+  (* Format.printf "User    Request:@.%s@.@." (build_request user_query); *)
+  Format.printf
+    "Spelled Request:@.%s@.@."
+    (Octane.Schema5.print_query Octane.Schema5.query);
+  ()
+;;
+
+let connect () =
+  let uri = "sqlite3:///home/tjdevries/git/octane/db.sqlite" in
+  let connection = Caqti_blocking.connect (Uri.of_string uri) in
+  match connection with
+  | Ok conn -> conn
+  | Error err ->
+    failwith
+      (Format.asprintf "Error connecting to %s: %a@." uri Caqti_error.pp err)
+;;
+
+(* module `Q` contains our query definitions *)
+module Q = struct
+  open Caqti_request.Infix
+
+  (*
+     Caqti infix operators
+
+     ->! decodes a single row
+     ->? decodes zero or one row
+     ->* decodes many rows
+     ->. expects no row
+  *)
+
+  (* `add` takes 2 ints (as a tuple), and returns 1 int *)
+  let add =
+    Caqti_type.(t2 int int ->! int)
+    "SELECT ? + ?"
+  [@@ocamlformat "disable"]
+
+  let mul =
+    Caqti_type.(t2 int int ->! int)
+    "SELECT ? * ?"
+  [@@ocamlformat "disable"]
+
+  let result x = Caqti_type.(t2 int x ->! int) "SELECT ? * ? * 2"
+end
+
+let add a b conn =
+  let module Conn = (val conn : Caqti_blocking.CONNECTION) in
+  Conn.find Q.add (a, b)
+;;
+
+let mul a b (module Conn : Caqti_blocking.CONNECTION) = Conn.find Q.mul (a, b)
+
+let testing x a b (module Conn : Caqti_blocking.CONNECTION) =
+  Conn.find (Q.result x) (a, b)
+;;
+
+let () =
+  let conn = connect () in
+  let res1 = mul 5 10 conn in
+  (* Ok... so possible to construct a caqti query here. *)
+  let res2 = testing Octane.Schema_caqti.caqti_thing 5 10 conn in
+  (* Ok, cool, we can connect to simple sql db *)
+  (* ... So now the question is... can I build the query dynamically as well *)
+  let _ =
+    match res1, res2 with
+    | Ok n1, Ok n2 -> Format.printf "%d, %d@." n1 n2
+    | _ -> assert false
+  in
+  ()
+;;
