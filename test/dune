@@ -1,2 +1,2 @@
-(test
- (name octane))
+(cram
+ (deps %{bin:oql_parse}))

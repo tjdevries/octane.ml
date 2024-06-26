@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-7-11-32-33-39-27"]
+
 class type table_user = object
   method user : unit
 end

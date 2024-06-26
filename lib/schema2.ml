@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-7-11-32-33-39-27"]
+
 type ('table, 'field) field =
   { name : string
   ; field_type : 'field Type.t

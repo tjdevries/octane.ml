@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-7-11-32-33-39-27"]
+
 open Schema4
 
 type 'a from =

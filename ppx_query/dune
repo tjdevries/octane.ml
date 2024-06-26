@@ -1,0 +1,15 @@
+; (executable
+;  (name pp)
+;  (modules pp)
+;  (libraries ppxlib)
+;  (preprocess (pps ppxlib.metaquot ppx_combust)))
+
+(library
+ (name ppx_query)
+ (kind ppx_deriver)
+ (package ppx_query)
+ (flags (:standard -w -27))
+ (libraries ppxlib base fmt ppx_deriving.api oql)
+ (preprocess
+  (pps ppxlib.metaquot)))
+

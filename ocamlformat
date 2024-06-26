@@ -1,0 +1,94 @@
+[@@@ocaml.ppx.context
+  {
+    tool_name = "ppx_driver";
+    include_dirs = [];
+    load_path = [];
+    open_modules = [];
+    for_package = None;
+    debug = false;
+    use_threads = false;
+    use_vmthreads = false;
+    recursive_types = false;
+    principal = false;
+    transparent_modules = false;
+    unboxed_types = false;
+    unsafe_string = false;
+    cookies = [("library-name", "octane")]
+  }]
+module Database =
+  struct
+    type t
+    let exec (t : t) ~params  ~query  ~deserializer  = assert false
+  end
+module User =
+  struct
+    type t = {
+      id: string ;
+      name: string ;
+      age: int }
+    let deserialize _ = { id = ""; name = ""; age = 0 }
+    let relation = "users"
+    module Fields =
+      struct
+        type id = string
+        type name = string
+        type age = int
+        let id = "id"
+        let name = "name"
+        let age = "age"
+        let deserialize_id _ = ""
+        let deserialize_name _ = ""
+        let deserialize_age _ = 0
+      end
+  end
+module Post =
+  struct
+    type t = {
+      id: string ;
+      user_id: string ;
+      title: string }
+    let relation = "posts"
+    module Fields =
+      struct
+        type id = string
+        type user_id = User.Fields.id
+        type title = string
+      end
+  end
+let get_users db =
+  let query = Format.sprintf "select * from %s" User.relation in
+  Database.exec db ~query ~params:[] ~deserializer:User.deserialize
+let get_user_names db =
+  let query =
+    Format.sprintf "select %s from %s" User.Fields.name User.relation in
+  Database.exec db ~query ~params:[]
+    ~deserializer:User.Fields.deserialize_name
+type params =
+  | String of string 
+  | Integer of int 
+let get_user_by_id db ~id  =
+  let query =
+    Format.sprintf "select * from %s where %s = $1" User.relation
+      User.Fields.id in
+  Database.exec db ~query ~params:[String id] ~deserializer:User.deserialize
+module Test =
+  struct
+    let exec db = "select * from the database"
+    type t = {
+      name: User.Fields.name ;
+      age: User.Fields.age }
+    let raw = "select User.name, User.age from User"
+  end
+module GetUserByID =
+  struct
+    type t = {
+      name: User.Fields.name ;
+      age: User.Fields.age }
+    let deserializer _ = { name = ""; age = 0 }
+    let exec db ~id  =
+      (let query =
+         Format.sprintf "select * from %s where %s = $1" User.relation
+           User.Fields.id in
+       Database.exec db ~query ~params:[String id] ~deserializer : t list)
+  end
+let ex db = let user = (GetUserByID.exec db ~id:"5") |> List.hd in user.age

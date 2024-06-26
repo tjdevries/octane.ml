@@ -1,6 +1,8 @@
-(lang dune 3.8)
+(lang dune 3.14)
 
 (name octane)
+
+(using menhir 3.0)
 
 (generate_opam_files true)
 
@@ -23,4 +25,18 @@
  (tags
   (topics "to describe" your project)))
 
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
+(package
+ (name oql)
+ (synopsis "OCaml Query Language")
+ (description "OCaml Query Language - very cool")
+ (depends ocaml dune menhirlib fmt ppx_deriving)
+ (tags (topics "oql")))
+
+(package
+ (name ppx_query)
+ (synopsis "Cool ppxs for queries")
+ (description "Cool ppxs for queries")
+ (depends ocaml dune ppxlib)
+ (tags
+  (topics "to describe" your project)))
+

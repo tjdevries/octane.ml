@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-7-11-32-33-39-27"]
+
 type sql_string = [ `string ]
 type sql_bytes = [ `bytes ]
 type sql_blob = [ `blob ]
@@ -298,7 +300,6 @@ type post =
   ; title : string
   ; views : int
   }
-[@@deriving octane]
 
 class post_table =
   object (self)
