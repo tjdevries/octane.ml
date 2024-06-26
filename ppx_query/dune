@@ -9,7 +9,7 @@
  (kind ppx_deriver)
  (package ppx_query)
  (flags (:standard -w -27))
- (libraries ppxlib base fmt ppx_deriving.api oql)
+ (libraries ppxlib base fmt ppx_deriving.api oql serde_derive)
  (preprocess
   (pps ppxlib.metaquot)))
 

@@ -1,4 +1,5 @@
-module User = struct
+(*
+   module User = struct
   type t =
     { id : string
     ; name : string
@@ -21,3 +22,4 @@ let%query (module UserNamesAndAges) = "select User.name, User.age from User"
 
 (* Variant Syntax *)
 let%query WithoutModule = "select User.name, User.age from User"
+*)

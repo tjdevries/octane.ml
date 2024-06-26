@@ -34,13 +34,24 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   in
   let field_types =
     List.map names ~f:(fun { pld_name; pld_type; pld_loc; _ } ->
-      let type_decl = Ast_helper.Type.mk pld_name ~manifest:pld_type in
+      let attrs =
+        [ Attr.make_deriving_attr ~loc:pld_loc [ "deserialize"; "serialize" ] ]
+      in
+      let type_decl = Ast_helper.Type.mk pld_name ~manifest:pld_type ~attrs in
       Ast_helper.Str.type_ Recursive [ type_decl ])
   in
   let field_module = Ast_helper.Mod.structure (field_names @ field_types) in
-  [ [%stri let relation = [%e name]]
-  ; [%stri module Fields = [%m field_module]]
-  ]
+  let deser =
+    Serde_derive.De.generate_impl ~ctxt (_rec_flag, type_declarations)
+  in
+  let ser =
+    Serde_derive.Ser.generate_impl ~ctxt (_rec_flag, type_declarations)
+  in
+  deser
+  @ ser
+  @ [ [%stri let relation = [%e name]]
+    ; [%stri module Fields = [%m field_module]]
+    ]
 ;;
 
 let generator () = Deriving.Generator.V2.make (args ()) generate_impl

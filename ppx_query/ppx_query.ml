@@ -66,14 +66,14 @@ let letter_rule =
     let query = Loc.txt query in
     (* Ast_traverse.fold *)
     (* let str_loc = Expansion_context.Extension.with_loc_and_path in *)
-    Fmt.epr "@.=====@.query: %s@." query;
     let ast = Oql.Run.parse query in
     let ast =
       match ast with
       | Ok ast -> ast
       | Error msg -> failwith msg
     in
-    Fmt.epr "%a@.======@." Oql.Ast.pp ast;
+    (* Fmt.epr "@.=====@.query: %s@." query; *)
+    (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
       match ast with
       | Oql.Ast.Select { expressions; relation = Some "User" } ->
@@ -114,11 +114,16 @@ let letter_rule =
             ~private_:Public
             ~manifest:None
         in
+        let attributes =
+          Attr.make_deriving_attr ~loc [ "serialize"; "deserialize" ]
+        in
+        let type_decl = { type_decl with ptype_attributes = [ attributes ] } in
         let type_decl =
           Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
         in
         [ type_decl
         ; [%stri let deserialize _ = assert false]
+          (* ; [%stri let query_string = [%e query]] *)
         ; [%stri
             let exec db =
               let query =

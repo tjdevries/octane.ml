@@ -35,20 +35,20 @@ type ('relation, 'expr) query =
 (*   Database.exec db ~query ~params:[ String id ] ~deserializer *)
 (* ;; *)
 
-module User = Tables.User
-
-(* let exec = [%exec select * from User where User.id = $1] *)
-let exec _db ~id =
-  let _ =
-    Select
-      { content =
-          Format.sprintf
-            "SELECT * FROM %s WHERE %s = $1"
-            User.relation
-            User.Fields.id
-      ; relation = User.relation
-      ; where = Expr.(field (Field.s User.Fields.id) = s id)
-      }
-  in
-  assert false
-;;
+(* module User = Tables.User *)
+(**)
+(* (* let exec = [%exec select * from User where User.id = $1] *) *)
+(* let exec _db ~id = *)
+(*   let _ = *)
+(*     Select *)
+(*       { content = *)
+(*           Format.sprintf *)
+(*             "SELECT * FROM %s WHERE %s = $1" *)
+(*             User.relation *)
+(*             User.Fields.id *)
+(*       ; relation = User.relation *)
+(*       ; where = Expr.(field (Field.s User.Fields.id) = s id) *)
+(*       } *)
+(*   in *)
+(*   assert false *)
+(* ;; *)
