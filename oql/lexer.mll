@@ -14,6 +14,7 @@ let quoted_identifier = '"' [^'"']* '"'
 let white = [' ' '\t' '\n']+
 let select = ['s' 'S']['e' 'E']['l' 'L']['e' 'E']['c' 'C']['t' 'T']
 let from = ['f' 'F']['r' 'R']['o' 'O']['m' 'M']
+let where = ['w' 'W']['h' 'H']['e' 'E']['r' 'R']['e' 'E']
 let null = ['n' 'N']['u' 'U']['l' 'L']['l' 'L']
 let cast = ['c' 'C']['a' 'A']['s' 'S']['t' 'T']
 let as_ = ['a' 'A']['s' 'S']
@@ -72,6 +73,7 @@ rule read =
   | "*" { STAR }
   | "/" { SLASH }
   | "%" { PERCENT }
+  | "=" { EQ }
   | positional_param { 
       let position = Lexing.lexeme lexbuf in
       let position = int_of_string (String.sub position 1 (String.length position - 1)) in
@@ -86,6 +88,7 @@ rule read =
   | null { NULL }
   | select { SELECT }
   | from { FROM }
+  | where { WHERE }
   | cast { CAST }
   | as_ { AS }
   | string {

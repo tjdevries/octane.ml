@@ -7,6 +7,7 @@ let pp_loc fmt (loc : loc) =
 type select_statement =
   { expressions : expression list
   ; relation : string option
+  ; where : expression option
   }
 
 and table = string
@@ -41,6 +42,13 @@ and binop =
   | Sub
   | Mul
   | Div
+  | Eq
+  | Neq
+  | Lt
+  | Gt
+  | Lte
+  | Gte
+  | Mod
 
 and unop =
   | Neg
@@ -53,6 +61,7 @@ and expression =
   | Number of number
   | TypeCast of (identifier * sql_str)
   | PositionalParam of int
+  | NamedParam of string
   | ColumnReference of correlation * field
   | Index of expression * index
   | BinaryExpression of expression * binop * expression

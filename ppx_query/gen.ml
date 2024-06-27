@@ -43,6 +43,7 @@ and to_expression_string ~loc (expression : Ast.expression) =
   | Ast.Number _ -> failwith "Number"
   | Ast.TypeCast _ -> failwith "TypeCast"
   | Ast.PositionalParam _ -> failwith "PositionalParam"
+  | Ast.NamedParam _ -> failwith "NamedParam"
   | Ast.ColumnReference (column_ref, field) ->
     of_column_reference ~loc (column_ref, field)
   | Ast.Index (_, _) -> failwith "Index"

@@ -73,7 +73,7 @@ let letter_rule =
     (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
       match ast with
-      | Oql.Ast.Select { expressions; relation = Some relation } ->
+      | Oql.Ast.Select { expressions; relation = Some relation; where } ->
         let open Oql.Ast in
         let fields =
           List.filter_map
@@ -119,13 +119,14 @@ let letter_rule =
           Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
         in
         let query_expr = Gen.to_query_string ~loc ast in
+        (* [%p arg1] *)
+        (* let arg1 = Ast_builder.Default.ppat_var ~loc (Loc.make ~loc "db") in *)
         [ type_decl
         ; [%stri
             module Query = struct
               type query = t list [@@deriving deserialize, serialize]
             end]
         ; [%stri let deserialize = Query.deserialize_query]
-          (* ; [%stri let query_string = [%e query]] *)
         ; [%stri
             let query db =
               let query = [%e query_expr] in

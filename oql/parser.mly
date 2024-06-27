@@ -24,7 +24,7 @@ open Ast
 %token BETWEEN IN LIKE ILIKE SIMILAR
 %token IS ISNULL NOTNULL
 
-%token SELECT FROM CAST AS
+%token SELECT FROM CAST AS WHERE
 %token STAR NULL
 %token COMMA DOT SEMICOLON COLON DOUBLE_COLON
 %token LPAR RPAR LBRACKET RBRACKET LBRACE RBRACE
@@ -53,8 +53,16 @@ open Ast
 %%
 
 let query :=
-  | SELECT; ~ = expressions; FROM; m = MODULE; EOF; { Select { expressions; relation = Some m } }
-  | SELECT; ~ = expressions; SEMICOLON?; EOF; { Select { expressions; relation = None } }
+  | SELECT; ~ = expressions; ~ = from; ~ = where; SEMICOLON?; EOF;
+      { Select { expressions; relation = from; where } }
+
+let from := 
+  | { None }
+  | FROM; m = MODULE; { Some m }
+
+let where :=
+  | { None }
+  | WHERE; ~ = expression; { Some expression }
 
 let expressions :=
   | separated_list(COMMA, expression)
@@ -66,6 +74,7 @@ let expression :=
   | ~ = BITSTRING; <BitString>
   | ~ = number; <Number>
   | ~ = POSITIONAL_PARAM; <PositionalParam>
+  | ~ = NAMED_PARAM; <NamedParam>
   (* | ~ = INTEGER; <Integer> *)
   (* | ~ = NUMBER; <Number> *)
   | delimited(LPAR, expression, RPAR)
@@ -81,6 +90,12 @@ let binop :=
   | (left, right) = binoprule(MINUS); { BinaryExpression (left, Sub, right) }
   | (left, right) = binoprule(STAR); { BinaryExpression (left, Mul, right) }
   | (left, right) = binoprule(SLASH); { BinaryExpression (left, Div, right) }
+  | (left, right) = binoprule(EQ); { BinaryExpression (left, Eq, right) }
+  | (left, right) = binoprule(GT); { BinaryExpression (left, Gt, right) }
+  | (left, right) = binoprule(GE); { BinaryExpression (left, Gt, right) }
+  | (left, right) = binoprule(LT); { BinaryExpression (left, Lt, right) }
+  | (left, right) = binoprule(LE); { BinaryExpression (left, Lte, right) }
+  | (left, right) = binoprule(PERCENT); { BinaryExpression (left, Mod, right) }
 
 let binoprule(middle) ==
   | left = expression; _ = middle; right = expression; { left, right }

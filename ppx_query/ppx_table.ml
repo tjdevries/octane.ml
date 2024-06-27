@@ -40,7 +40,35 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
       let type_decl = Ast_helper.Type.mk pld_name ~manifest:pld_type ~attrs in
       Ast_helper.Str.type_ Recursive [ type_decl ])
   in
-  let field_module = Ast_helper.Mod.structure (field_names @ field_types) in
+  let field_params =
+    List.map names ~f:(fun { pld_name; pld_type; pld_loc; _ } ->
+      let name = Default.ppat_var ~loc:pld_loc pld_name in
+      let ename = Default.evar ~loc:pld_loc (Loc.txt pld_name) in
+      let param_name = "param_" ^ Loc.txt pld_name in
+      let param_name =
+        Default.ppat_var ~loc:pld_loc (Loc.make ~loc:pld_loc param_name)
+      in
+      let constructor =
+        match pld_type.ptyp_desc with
+        | Ptyp_constr (lident, []) ->
+          let txt = Loc.txt lident in
+          (match txt with
+           | Lident ident -> ident
+           | Ldot (_, _) -> failwith "TODO: Ldot"
+           | Lapply (_, _) -> failwith "TODO: Lapply")
+        | _ -> failwith "TODO: field_params"
+      in
+      let constructor =
+        match constructor with
+        | "int" -> [%expr Dbcaml.Params.Number [%e ename]]
+        | "string" -> [%expr Dbcaml.Params.String [%e ename]]
+        | _ -> failwith "TODO: field_params"
+      in
+      [%stri let [%p param_name] = fun [%p name] -> [%e constructor]])
+  in
+  let field_module =
+    Ast_helper.Mod.structure (field_names @ field_types @ field_params)
+  in
   let deser =
     Serde_derive.De.generate_impl ~ctxt (_rec_flag, type_declarations)
   in

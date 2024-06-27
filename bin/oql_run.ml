@@ -15,7 +15,7 @@ module User = struct
   [@@deriving table { name = "users" }]
 end
 
-let%query (module UserName) = "SELECT  User.name, User.id FROM User"
+let%query (module UserName) = "SELECT User.id, User.name FROM User"
 
 let example db =
   let* users = UserName.query db in
@@ -23,6 +23,20 @@ let example db =
   List.iter users ~f:(fun { id; name } ->
     Fmt.pr "@.We read this from the database: %d - %s@." id name);
   Ok ()
+;;
+
+(* generated_query_one db ~id deserialize *)
+let generated_query_one db ~id deserialize =
+  let query = "" in
+  Fmt.epr "query: %s@." query;
+  Silo_postgres.query db ~params:[ Number id ] ~query ~deserializer:deserialize
+;;
+
+(* generated_query_two db ~id:(Number id) deserialize *)
+let generated_query_two db ~id deserialize =
+  let query = "" in
+  Fmt.epr "query: %s@." query;
+  Silo_postgres.query db ~params:[ id ] ~query ~deserializer:deserialize
 ;;
 
 let () =

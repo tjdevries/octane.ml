@@ -191,7 +191,11 @@ Pretty print the file
   end
   
   module UserNameQuery = struct
-    type t = { name : User.Fields.name } [@@deriving serialize, deserialize]
+    type t =
+      { id : User.Fields.id
+      ; name : User.Fields.name
+      }
+    [@@deriving serialize, deserialize]
   
     include struct
       let _ = fun (_ : t) -> ()
@@ -201,7 +205,8 @@ Pretty print the file
         let _ = ( let* ) in
         let open Serde.Ser in
         fun t ctx ->
-          record ctx "t" 1 (fun ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let* () = field ctx "id" ((s User.Fields.serialize_id) t.id) in
             let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
             Ok ())
       ;;
@@ -215,20 +220,23 @@ Pretty print the file
         let _ = ( let* ) in
         let open Serde.De in
         fun ctx ->
-          record ctx "t" 1 (fun ctx ->
+          record ctx "t" 2 (fun ctx ->
             let field_visitor =
               let visit_string _ctx str =
                 match str with
                 | "name" -> Ok `name
+                | "id" -> Ok `id
                 | _ -> Ok `invalid_tag
               in
               let visit_int _ctx str =
                 match str with
                 | 0 -> Ok `name
+                | 1 -> Ok `id
                 | _ -> Ok `invalid_tag
               in
               Visitor.make ~visit_string ~visit_int ()
             in
+            let id = ref None in
             let name = ref None in
             let rec read_fields () =
               let* tag = next_field ctx field_visitor in
@@ -237,18 +245,27 @@ Pretty print the file
                 let* v = field ctx "name" (d User.Fields.deserialize_name) in
                 name := Some v;
                 read_fields ()
+              | Some `id ->
+                let* v = field ctx "id" (d User.Fields.deserialize_id) in
+                id := Some v;
+                read_fields ()
               | Some `invalid_tag ->
                 let* () = ignore_any ctx in
                 read_fields ()
               | None -> Ok ()
             in
             let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
             let* name =
               Stdlib.Option.to_result
                 ~none:(`Msg "missing field \"name\" (\"name\")")
                 !name
             in
-            Ok { name })
+            Ok { name; id })
       ;;
   
       let _ = deserialize_t
@@ -289,14 +306,16 @@ Pretty print the file
         Stdlib.Format.sprintf
           "SELECT %s FROM %s"
           (Stdlib.String.concat
-             ","
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"
+             ; Stdlib.Format.sprintf "%s.%s" User.relation "name"
+             ])
           User.relation
       in
       Fmt.epr "query: %s@." query;
       Silo_postgres.query db ~query ~deserializer:deserialize
     ;;
   
-    let raw = "select User.name from User"
+    let raw = "select User.id, User.name from User"
   end [@warning "-32"]
 < language: ocaml

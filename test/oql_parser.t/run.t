@@ -33,12 +33,54 @@ Execute Test Suite:
             (Field (<1:352>, <1:356>, (Unquoted "col2")))));
          (ColumnReference ((Table (Unquoted "tbl")), Star));
          (String (SingleQuote "the end"))];
-       relation = None })
+       relation = None; where = None })
   
   ===== ./examples/simple_select.sql =====
   (Select
      { expressions = [(Identifier (Unquoted "name"))];
-       relation = (Some "Users") })
+       relation = (Some "Users"); where = None })
+  
+  ===== ./examples/from.sql =====
+  (Select
+     { expressions =
+       [(ColumnReference ((Table (Module "User")),
+           (Field (<1:12>, <1:14>, (Unquoted "id")))))
+         ];
+       relation = (Some "User");
+       where =
+       (Some (BinaryExpression (
+                (ColumnReference ((Table (Module "User")),
+                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
+                Eq, (Number (Integer 1)))))
+       })
+  
+  ===== ./examples/from_with_positional_param.sql =====
+  (Select
+     { expressions =
+       [(ColumnReference ((Table (Module "User")),
+           (Field (<1:12>, <1:14>, (Unquoted "id")))))
+         ];
+       relation = (Some "User");
+       where =
+       (Some (BinaryExpression (
+                (ColumnReference ((Table (Module "User")),
+                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
+                Eq, (PositionalParam 1))))
+       })
+  
+  ===== ./examples/from_with_named_param.sql =====
+  (Select
+     { expressions =
+       [(ColumnReference ((Table (Module "User")),
+           (Field (<1:12>, <1:14>, (Unquoted "id")))))
+         ];
+       relation = (Some "User");
+       where =
+       (Some (BinaryExpression (
+                (ColumnReference ((Table (Module "User")),
+                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
+                Eq, (NamedParam "id"))))
+       })
   
   ===== ./examples/operators.sql =====
   (Select
@@ -55,4 +97,4 @@ Execute Test Suite:
               ]
             ));
          (String (SingleQuote "end"))];
-       relation = None })
+       relation = None; where = None })
