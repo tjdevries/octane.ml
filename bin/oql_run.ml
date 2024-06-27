@@ -15,7 +15,15 @@ module User = struct
   [@@deriving table { name = "users" }]
 end
 
-let%query (module UserName) = "SELECT User.id, User.name FROM User"
+let%query (module UserName) = "SELECT  User.name, User.id FROM User"
+
+let example db =
+  let* users = UserName.query db in
+  let users = Option.value users ~default:[] in
+  List.iter users ~f:(fun { id; name } ->
+    Fmt.pr "@.We read this from the database: %d - %s@." id name);
+  Ok ()
+;;
 
 let () =
   Riot.run_with_status ~workers:2 ~on_error:(fun x -> failwith x)
