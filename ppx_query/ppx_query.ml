@@ -64,11 +64,8 @@ let letter_rule =
     let loc = Expansion_context.Extension.extension_point_loc ctxt in
     let query_loc = Loc.loc query in
     let query = Loc.txt query in
-    (* Ast_traverse.fold *)
-    (* let str_loc = Expansion_context.Extension.with_loc_and_path in *)
-    let ast = Oql.Run.parse query in
     let ast =
-      match ast with
+      match Oql.Run.parse query with
       | Ok ast -> ast
       | Error msg -> failwith msg
     in
@@ -76,7 +73,7 @@ let letter_rule =
     (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
       match ast with
-      | Oql.Ast.Select { expressions; relation = Some "User" } ->
+      | Oql.Ast.Select { expressions; relation = Some relation } ->
         let open Oql.Ast in
         let fields =
           List.filter_map
@@ -121,26 +118,29 @@ let letter_rule =
         let type_decl =
           Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
         in
+        let query_expr = Gen.to_query_string ~loc ast in
         [ type_decl
-        ; [%stri let deserialize _ = assert false]
+        ; [%stri
+            module Query = struct
+              type query = t list [@@deriving deserialize, serialize]
+            end]
+        ; [%stri let deserialize = Query.deserialize_query]
           (* ; [%stri let query_string = [%e query]] *)
         ; [%stri
-            let exec db =
-              let query =
-                Format.sprintf "select %s from %s" "users.name" "users"
-              in
-              let _ = db in
-              (* Database.exec db ~query ~params:[] ~deserializer:deserialize *)
-              query
+            let query db =
+              let query = [%e query_expr] in
+              Fmt.epr "query: %s@." query;
+              Silo_postgres.query db ~query ~deserializer:deserialize
             ;;]
         ]
       | _ -> []
     in
     let query = Ast_builder.Default.estring ~loc query in
+    let ignore_warning = Attr.make_ignore_warning ~loc in
     let x =
       { pmod_desc = Pmod_structure (items @ [ [%stri let raw = [%e query]] ])
       ; pmod_loc = loc
-      ; pmod_attributes = []
+      ; pmod_attributes = [ ignore_warning ]
       }
     in
     let binding =

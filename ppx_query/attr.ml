@@ -1,6 +1,5 @@
 open Base
 open Ppxlib
-open Ast_builder
 
 let make_deriving_attr ~loc names =
   (* Ast_helper.Exp.tuple *)
@@ -18,4 +17,11 @@ let make_deriving_attr ~loc names =
   let structure_item = Ast_helper.Str.eval tuple in
   let payload = PStr [ structure_item ] in
   Ast_helper.Attr.mk (Loc.make ~loc "deriving") payload
+;;
+
+let make_ignore_warning ~loc =
+  let const = Ast_builder.Default.estring ~loc "-32" in
+  let structure_item = Ast_helper.Str.eval const in
+  let payload = PStr [ structure_item ] in
+  Ast_helper.Attr.mk (Loc.make ~loc "warning") payload
 ;;

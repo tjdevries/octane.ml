@@ -9,4 +9,4 @@ module User = struct
   [@@deriving table { name = "users" }]
 end
 
-let%query (module UserNameQuery) = "select User.name from User"
+let%query (module UserNameQuery) = "select User.id, User.name from User"

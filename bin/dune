@@ -18,7 +18,7 @@
   (public_name oql_run)
   (package oql)
   (modules oql_run)
-  (libraries oql octane fmt bos silo-postgres dbcaml riot serde)
+  (libraries oql octane fmt bos silo-postgres dbcaml riot serde base)
   (preprocess (pps serde_derive ppx_query)))
 
 (executable

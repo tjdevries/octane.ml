@@ -18,11 +18,8 @@ Pretty print the file
   
       open! Serde
   
-      let ( let* ) = Result.bind
-      let _ = ( let* )
-  
       let deserialize_t =
-        let ( let* ) = Result.bind in
+        let ( let* ) = Stdlib.Result.bind in
         let _ = ( let* ) in
         let open Serde.De in
         fun ctx ->
@@ -69,24 +66,28 @@ Pretty print the file
             in
             let* () = read_fields () in
             let* id =
-              Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
             in
             let* name =
-              Option.to_result
+              Stdlib.Option.to_result
                 ~none:(`Msg "missing field \"name\" (\"name\")")
                 !name
             in
             let* age =
-              Option.to_result ~none:(`Msg "missing field \"age\" (\"age\")") !age
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"age\" (\"age\")")
+                !age
             in
             Ok { age; name; id })
       ;;
   
       let _ = deserialize_t
-      let ( let* ) = Result.bind
-      let _ = ( let* )
   
       let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
         let open Serde.Ser in
         fun t ctx ->
           record ctx "t" 3 (fun ctx ->
@@ -115,21 +116,18 @@ Pretty print the file
   
           open! Serde
   
-          let ( let* ) = Result.bind
-          let _ = ( let* )
-  
           let deserialize_id =
-            let ( let* ) = Result.bind in
+            let ( let* ) = Stdlib.Result.bind in
             let _ = ( let* ) in
             let open Serde.De in
             fun ctx -> int ctx
           ;;
   
           let _ = deserialize_id
-          let ( let* ) = Result.bind
-          let _ = ( let* )
   
           let serialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
             let open Serde.Ser in
             fun t ctx -> int t ctx
           ;;
@@ -144,21 +142,18 @@ Pretty print the file
   
           open! Serde
   
-          let ( let* ) = Result.bind
-          let _ = ( let* )
-  
           let deserialize_name =
-            let ( let* ) = Result.bind in
+            let ( let* ) = Stdlib.Result.bind in
             let _ = ( let* ) in
             let open Serde.De in
             fun ctx -> string ctx
           ;;
   
           let _ = deserialize_name
-          let ( let* ) = Result.bind
-          let _ = ( let* )
   
           let serialize_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
             let open Serde.Ser in
             fun t ctx -> string t ctx
           ;;
@@ -173,21 +168,18 @@ Pretty print the file
   
           open! Serde
   
-          let ( let* ) = Result.bind
-          let _ = ( let* )
-  
           let deserialize_age =
-            let ( let* ) = Result.bind in
+            let ( let* ) = Stdlib.Result.bind in
             let _ = ( let* ) in
             let open Serde.De in
             fun ctx -> int ctx
           ;;
   
           let _ = deserialize_age
-          let ( let* ) = Result.bind
-          let _ = ( let* )
   
           let serialize_age =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
             let open Serde.Ser in
             fun t ctx -> int t ctx
           ;;
@@ -203,10 +195,10 @@ Pretty print the file
   
     include struct
       let _ = fun (_ : t) -> ()
-      let ( let* ) = Result.bind
-      let _ = ( let* )
   
       let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
         let open Serde.Ser in
         fun t ctx ->
           record ctx "t" 1 (fun ctx ->
@@ -218,11 +210,8 @@ Pretty print the file
   
       open! Serde
   
-      let ( let* ) = Result.bind
-      let _ = ( let* )
-  
       let deserialize_t =
-        let ( let* ) = Result.bind in
+        let ( let* ) = Stdlib.Result.bind in
         let _ = ( let* ) in
         let open Serde.De in
         fun ctx ->
@@ -255,7 +244,7 @@ Pretty print the file
             in
             let* () = read_fields () in
             let* name =
-              Option.to_result
+              Stdlib.Option.to_result
                 ~none:(`Msg "missing field \"name\" (\"name\")")
                 !name
             in
@@ -265,14 +254,49 @@ Pretty print the file
       let _ = deserialize_t
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   
-    let deserialize _ = assert false
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
   
-    let exec db =
-      let query = Format.sprintf "select %s from %s" "users.name" "users" in
-      let _ = db in
-      query
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s"
+          (Stdlib.String.concat
+             ","
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
+          User.relation
+      in
+      Fmt.epr "query: %s@." query;
+      Silo_postgres.query db ~query ~deserializer:deserialize
     ;;
   
     let raw = "select User.name from User"
-  end
+  end [@warning "-32"]
 < language: ocaml
