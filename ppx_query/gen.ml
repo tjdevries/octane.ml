@@ -44,12 +44,12 @@ let type_of_expression_to_generated_expression ~loc type_of_expr expr =
   let expr = Ast_builder.Default.evar ~loc expr in
   let open Ast in
   match type_of_expr with
-  | Some (Column c) ->
-    (* <m>.Params.<id> expr *)
-    (* let f = get_field_as_string f in *)
-    (* let param_fn = module_param ~loc m f in *)
-    (* [%expr [%e param_fn] [%e expr]] *)
-    [%expr todo [%e expr]]
+  | Some (ModelField model_field) ->
+    let model = ModelField.model_name model_field in
+    let field = ModelField.field_name model_field in
+    let param_fn = module_param ~loc model field in
+    [%expr [%e param_fn] [%e expr]]
+  | Some (Column c) -> failwith "Need to implement Column support"
   | _ -> expr
 ;;
 
@@ -136,7 +136,9 @@ and of_expression ~loc (expression : Ast.expression) =
   | Ast.UnaryExpression (_, _) -> failwith "UnaryExpression"
   | Ast.FunctionCall (_, _) -> failwith "FunctionCall"
   | Ast.Null -> failwith "Null"
-  | Ast.TypedColumn (m, f) -> failwith "TypedColumn"
+  | Ast.ModelField m -> of_model_field ~loc m
+  (* | Ast.ColumnReference (column_ref, field) -> *)
+  (*   of_column_reference ~loc (column_ref, field) *)
   | _ -> failwith "unsupported expression"
 
 and of_binary_expression ~loc left op right =
@@ -148,13 +150,9 @@ and of_binary_expression ~loc left op right =
   (* let op = of_bitop ~loc op in *)
   (* [%expr Stdlib.Format.sprintf "(%s %s %s)" [%e left] [%e op] [%e right]] *)
   match left, right with
-  (* | ColumnReference (correlation, field), NamedParam param -> *)
   (*   let _ = get_param ~loc correlation field in *)
-  (*   (* Stdlib.Format.sprintf "(%s = %s)" [%e left] [%e right] *) *)
-  (*   [%expr "TODO:named"] *)
-  (* | ColumnReference (correlation, field), PositionalParam pos -> *)
-  (*   let _ = get_param ~loc correlation field in *)
-  (*   [%expr "TODO:pos"] *)
+  | ModelField model_field, NamedParam param -> [%expr "TODO"]
+  | ModelField model_field, PositionalParam pos -> [%expr "TODO"]
   | _ -> failwith "binary expression: not supported"
 
 and of_bitop ~loc op =
@@ -162,6 +160,14 @@ and of_bitop ~loc op =
   | Ast.Add -> Ast_builder.Default.estring ~loc "+"
   | Ast.Eq -> Ast_builder.Default.estring ~loc "="
   | _ -> failwith "bitop"
+
+and of_model_field ~loc m =
+  let open Ast in
+  let ident = Ldot (Lident (ModelField.model_name m), "relation") in
+  let ident = Loc.make ~loc ident in
+  let table = Ast_helper.Exp.ident ~loc ident in
+  let field = Ast_builder.Default.estring ~loc (ModelField.field_name m) in
+  [%expr Stdlib.Format.sprintf "%s.%s" [%e table] [%e field]]
 
 and of_column ~loc col =
   match col with

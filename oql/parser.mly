@@ -86,7 +86,7 @@ let where :=
   | WHERE; ~ = expression; { expression }
 
 let table_or_subquery :=
-  | m = MODULE; { Module (Module.make ($startpos, $endpos, m)) }
+  | m = MODULE; { Model (Model.make ($startpos, $endpos, m)) }
   | ~ = name; { Table (Table.make name) }
   (* | t = IDENTIFIER; { Table (Table.of_string t) } *)
 
@@ -112,7 +112,12 @@ let field :=
     let field = Field.make name in
     Column (Column.make None None field)
   }
-  | m = MODULE; DOT; name = NAME; { TypedColumn (m, name) }
+  | m = model; DOT; name = name; {
+    ModelField (ModelField.make m name)
+  }
+
+let model := 
+  | m = MODULE; { $startpos, $endpos, m }
 
 let column :=
   | ~ = field; { field }

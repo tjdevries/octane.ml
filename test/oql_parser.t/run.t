@@ -28,40 +28,67 @@ Execute Test Suite:
            ]
          };
        from =
-       (Some { relation = [(Module (<1:17>, <1:22>, "Users"))]; join = None });
+       (Some { relation = [(Model (<1:17>, <1:22>, "Users"))]; join = None });
        where = None })
   
   ===== ./examples/from.sql =====
   (Select
      { select =
        { result_kind = None;
-         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+         result_columns =
+         [(Expression (
+             (ModelField
+                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
+                  field = (<1:12>, <1:14>, "id") }),
+             None))
+           ]
+         };
        from =
-       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
+       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
        where = None })
   
   ===== ./examples/from_with_positional_param.sql =====
   (Select
      { select =
        { result_kind = None;
-         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+         result_columns =
+         [(Expression (
+             (ModelField
+                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
+                  field = (<1:12>, <1:14>, "id") }),
+             None))
+           ]
+         };
        from =
-       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
+       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
        where =
-       (Some (BinaryExpression ((TypedColumn ("User", "id")), Eq,
-                (PositionalParam 1))))
+       (Some (BinaryExpression (
+                (ModelField
+                   { Ast.ModelField.model = (<1:31>, <1:35>, "User");
+                     field = (<1:36>, <1:38>, "id") }),
+                Eq, (PositionalParam 1))))
        })
   
   ===== ./examples/from_with_named_param.sql =====
   (Select
      { select =
        { result_kind = None;
-         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+         result_columns =
+         [(Expression (
+             (ModelField
+                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
+                  field = (<1:12>, <1:14>, "id") }),
+             None))
+           ]
+         };
        from =
-       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
+       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
        where =
-       (Some (BinaryExpression ((TypedColumn ("User", "id")), Eq,
-                (NamedParam "id"))))
+       (Some (BinaryExpression (
+                (ModelField
+                   { Ast.ModelField.model = (<1:31>, <1:35>, "User");
+                     field = (<1:36>, <1:38>, "id") }),
+                Eq, (NamedParam "id"))))
        })
   
   ===== ./examples/operators.sql =====

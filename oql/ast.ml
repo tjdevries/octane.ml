@@ -7,31 +7,49 @@ let pp_loc fmt (loc : loc) =
 ;;
 
 (* TODO: This is a bit weird, but it's OK for now. Used to ignore locs when comparing equality *)
-let equal_loc a b = true
+let equal_loc _ _ = true
+let compare_loc _ _ = 0
 
 module Name = struct
-  type t = loc * loc * string [@@deriving show, eq]
+  type t = loc * loc * string [@@deriving show, eq, compare]
 
   let make (start, finish, s) : t = start, finish, s
 end
 
 module MakeName () = struct
-  type t = Name.t [@@deriving show, eq]
+  type t = Name.t [@@deriving show, eq, compare]
 
   let make s = s
   let start (start, _, _) = start
   let finish (_, finish, _) = finish
   let name (_, _, s) = s
+
+  let location (start, finish, _) =
+    Ppxlib.Location.{ loc_start = start; loc_end = finish; loc_ghost = false }
+  ;;
 end
 
 module Schema = MakeName ()
 module Table = MakeName ()
-module Module = MakeName ()
 module FuncName = MakeName ()
 module TypeName = MakeName ()
 
 module Field = struct
   include MakeName ()
+end
+
+module Model = MakeName ()
+
+module ModelField = struct
+  type t =
+    { model : Model.t
+    ; field : Field.t
+    }
+  [@@deriving show, eq]
+
+  let make model field = { model; field }
+  let model_name t = Model.name t.model
+  let field_name t = Field.name t.field
 end
 
 module Column = struct
@@ -71,7 +89,7 @@ and join_clause =
 (* TODO: table-or-subquery *)
 and table_or_subquery =
   | Table of Table.t
-  | Module of Module.t
+  | Model of Model.t
   | Subquery of string
 
 and join_operator =
@@ -141,7 +159,7 @@ and expression =
   (* | CurrentDate | CurrentTime | CurrentTimestamp *)
   (* BindParameter *)
   | Column of Column.t
-  | TypedColumn of (string * string)
+  | ModelField of ModelField.t
   | BitString of string
   | TypeCast of (TypeName.t * string_literal)
   | PositionalParam of int
@@ -156,7 +174,7 @@ and t = Select of select_statement [@@deriving show { with_path = false }, eq]
 let get_relation_ident (relation : table_or_subquery) =
   match relation with
   | Table table -> Table.name table
-  | Module m -> Module.name m
+  | Model m -> Model.name m
   | Subquery _ -> failwith "TODO: Subquery"
 ;;
 

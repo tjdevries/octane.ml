@@ -1,96 +1,836 @@
 Pretty print the file
 
-  $ pp_query ./lib/table.ml | ocamlformat --impl -
-  Fatal error: exception Failure("TypedColumn")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from Base__List.count_map in file "src/list.ml", line 482, characters 13-17
-  Called from Base__List.map in file "src/list.ml" (inlined), line 510, characters 15-31
-  Called from Ppx_query__Gen.of_expressions in file "ppx_query/gen.ml", line 120, characters 14-58
-  Called from Ppx_query__Gen.to_select_string in file "ppx_query/gen.ml", line 100, characters 20-51
-  Called from Ppx_query__Gen.of_ast in file "ppx_query/gen.ml", line 61, characters 21-49
-  Called from Ppx_query.letter_rule.(fun) in file "ppx_query/ppx_query.ml", line 123, characters 23-42
-  Called from Ppxlib__Ast_pattern_generated.pconst_string.(fun) in file "src/ast_pattern_generated.ml", line 612, characters 27-42
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.map_result.(fun) in file "src/ast_pattern.ml", line 170, characters 53-71
-  Called from Ppxlib__Ast_pattern.parse_res in file "src/ast_pattern.ml", line 9, characters 9-36
-  Called from Ppxlib__Extension.For_context.convert_inline_res.(fun) in file "src/extension.ml", line 274, characters 8-66
-  Called from Ppxlib__Context_free.map_top_down#structure.loop in file "src/context_free.ml", line 675, characters 16-73
-  Called from Ppxlib__Context_free.map_top_down#structure.loop.(fun) in file "src/context_free.ml", line 732, characters 20-49
-  Called from Ppxlib__Common.With_errors.(>>=) in file "src/common.ml", line 266, characters 21-24
-  Called from Ppxlib__Driver.Transform.merge_into_generic_mappers.map_impl in file "src/driver.ml", line 280, characters 6-73
-  Called from Ppxlib__Driver.apply_transforms.(fun) in file "src/driver.ml", line 567, characters 19-29
-  Called from Stdlib__List.fold_left in file "list.ml", line 123, characters 24-34
-  Called from Ppxlib__Driver.apply_transforms in file "src/driver.ml", line 543, characters 4-1023
-  Called from Ppxlib__Driver.map_structure_gen in file "src/driver.ml", line 692, characters 4-273
-  Called from Ppxlib__Driver.process_ast in file "src/driver.ml", line 1054, characters 10-127
-  Called from Ppxlib__Driver.process_file in file "src/driver.ml", line 1099, characters 15-111
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1522, characters 9-27
-  Re-raised at Location.report_exception.loop in file "parsing/location.ml", line 1013, characters 14-25
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1525, characters 4-61
-  Called from Dune__exe__Pp_query in file "bin/pp_query.ml", line 1, characters 9-36
+  $ pp_query ./lib/table.ml > ./lib/table-generated.ml
+  $ ocamlformat ./lib/table-generated.ml
+  module User = struct
+    type t =
+      { id : int
+      ; name : string
+      ; age : int
+      }
+    [@@deriving table { name = "users" }]
+  
+    include struct
+      [@@@ocaml.warning "-60"]
+  
+      let _ = fun (_ : t) -> ()
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 3 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "age" -> Ok `age
+                | "name" -> Ok `name
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `age
+                | 1 -> Ok `name
+                | 2 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let name = ref None in
+            let age = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `age ->
+                let* v = field ctx "age" int in
+                age := Some v;
+                read_fields ()
+              | Some `name ->
+                let* v = field ctx "name" string in
+                name := Some v;
+                read_fields ()
+              | Some `id ->
+                let* v = field ctx "id" int in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            let* name =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"name\" (\"name\")")
+                !name
+            in
+            let* age =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"age\" (\"age\")")
+                !age
+            in
+            Ok { age; name; id })
+      ;;
+  
+      let _ = deserialize_t
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 3 (fun ctx ->
+            let* () = field ctx "id" (int t.id) in
+            let* () = field ctx "name" (string t.name) in
+            let* () = field ctx "age" (int t.age) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+      let relation = "users"
+      let _ = relation
+  
+      module Fields = struct
+        let id = "id"
+        let _ = id
+        let name = "name"
+        let _ = name
+        let age = "age"
+        let _ = age
+  
+        type id = int [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : id) -> ()
+  
+          open! Serde
+  
+          let deserialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> int ctx
+          ;;
+  
+          let _ = deserialize_id
+  
+          let serialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> int t ctx
+          ;;
+  
+          let _ = serialize_id
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+        type name = string [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : name) -> ()
+  
+          open! Serde
+  
+          let deserialize_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> string ctx
+          ;;
+  
+          let _ = deserialize_name
+  
+          let serialize_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> string t ctx
+          ;;
+  
+          let _ = serialize_name
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+        type age = int [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : age) -> ()
+  
+          open! Serde
+  
+          let deserialize_age =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> int ctx
+          ;;
+  
+          let _ = deserialize_age
+  
+          let serialize_age =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> int t ctx
+          ;;
+  
+          let _ = serialize_age
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+      end
+  
+      module Params = struct
+        let id id = Dbcaml.Params.Number id
+        let _ = id
+        let name name = Dbcaml.Params.String name
+        let _ = name
+        let age age = Dbcaml.Params.Number age
+        let _ = age
+      end
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  end
+  
+  module UserNameQuery = struct
+    type t =
+      { id : User.Fields.id
+      ; name : User.Fields.name
+      }
+    [@@deriving serialize, deserialize]
+  
+    include struct
+      let _ = fun (_ : t) -> ()
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let* () = field ctx "id" ((s User.Fields.serialize_id) t.id) in
+            let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "name" -> Ok `name
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `name
+                | 1 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let name = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `name ->
+                let* v = field ctx "name" (d User.Fields.deserialize_name) in
+                name := Some v;
+                read_fields ()
+              | Some `id ->
+                let* v = field ctx "id" (d User.Fields.deserialize_id) in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            let* name =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"name\" (\"name\")")
+                !name
+            in
+            Ok { name; id })
+      ;;
+  
+      let _ = deserialize_t
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
+  
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s"
+          (Stdlib.String.concat
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"
+             ; Stdlib.Format.sprintf "%s.%s" User.relation "name"
+             ])
+          User.relation
+      in
+      let params = [] in
+      Fmt.epr "query: %s@." query;
+      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+    ;;
+  
+    let raw = "select User.id, User.name from User"
+  end [@warning "-32"]
 < language: ocaml
 
   $ pp_query ./lib/where_id.ml | ocamlformat --impl -
-  Fatal error: exception Failure("TypedColumn")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from Base__List.count_map in file "src/list.ml", line 482, characters 13-17
-  Called from Base__List.map in file "src/list.ml" (inlined), line 510, characters 15-31
-  Called from Ppx_query__Gen.of_expressions in file "ppx_query/gen.ml", line 120, characters 14-58
-  Called from Ppx_query__Gen.to_select_string in file "ppx_query/gen.ml", line 100, characters 20-51
-  Called from Ppx_query__Gen.of_ast in file "ppx_query/gen.ml", line 61, characters 21-49
-  Called from Ppx_query.letter_rule.(fun) in file "ppx_query/ppx_query.ml", line 123, characters 23-42
-  Called from Ppxlib__Ast_pattern_generated.pconst_string.(fun) in file "src/ast_pattern_generated.ml", line 612, characters 27-42
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.map_result.(fun) in file "src/ast_pattern.ml", line 170, characters 53-71
-  Called from Ppxlib__Ast_pattern.parse_res in file "src/ast_pattern.ml", line 9, characters 9-36
-  Called from Ppxlib__Extension.For_context.convert_inline_res.(fun) in file "src/extension.ml", line 274, characters 8-66
-  Called from Ppxlib__Context_free.map_top_down#structure.loop in file "src/context_free.ml", line 675, characters 16-73
-  Called from Ppxlib__Context_free.map_top_down#structure.loop.(fun) in file "src/context_free.ml", line 732, characters 20-49
-  Called from Ppxlib__Common.With_errors.(>>=) in file "src/common.ml", line 266, characters 21-24
-  Called from Ppxlib__Driver.Transform.merge_into_generic_mappers.map_impl in file "src/driver.ml", line 280, characters 6-73
-  Called from Ppxlib__Driver.apply_transforms.(fun) in file "src/driver.ml", line 567, characters 19-29
-  Called from Stdlib__List.fold_left in file "list.ml", line 123, characters 24-34
-  Called from Ppxlib__Driver.apply_transforms in file "src/driver.ml", line 543, characters 4-1023
-  Called from Ppxlib__Driver.map_structure_gen in file "src/driver.ml", line 692, characters 4-273
-  Called from Ppxlib__Driver.process_ast in file "src/driver.ml", line 1054, characters 10-127
-  Called from Ppxlib__Driver.process_file in file "src/driver.ml", line 1099, characters 15-111
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1522, characters 9-27
-  Re-raised at Location.report_exception.loop in file "parsing/location.ml", line 1013, characters 14-25
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1525, characters 4-61
-  Called from Dune__exe__Pp_query in file "bin/pp_query.ml", line 1, characters 9-36
+  module User = struct
+    type t = { id : int } [@@deriving table { name = "users" }]
+  
+    include struct
+      [@@@ocaml.warning "-60"]
+  
+      let _ = fun (_ : t) -> ()
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `id ->
+                let* v = field ctx "id" int in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            Ok { id })
+      ;;
+  
+      let _ = deserialize_t
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let* () = field ctx "id" (int t.id) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+      let relation = "users"
+      let _ = relation
+  
+      module Fields = struct
+        let id = "id"
+        let _ = id
+  
+        type id = int [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : id) -> ()
+  
+          open! Serde
+  
+          let deserialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> int ctx
+          ;;
+  
+          let _ = deserialize_id
+  
+          let serialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> int t ctx
+          ;;
+  
+          let _ = serialize_id
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+      end
+  
+      module Params = struct
+        let id id = Dbcaml.Params.Number id
+        let _ = id
+      end
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  end
+  
+  module UserByID = struct
+    type t =
+      { id : User.Fields.id
+      ; name : User.Fields.name
+      }
+    [@@deriving serialize, deserialize]
+  
+    include struct
+      let _ = fun (_ : t) -> ()
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let* () = field ctx "id" ((s User.Fields.serialize_id) t.id) in
+            let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "name" -> Ok `name
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `name
+                | 1 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let name = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `name ->
+                let* v = field ctx "name" (d User.Fields.deserialize_name) in
+                name := Some v;
+                read_fields ()
+              | Some `id ->
+                let* v = field ctx "id" (d User.Fields.deserialize_id) in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            let* name =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"name\" (\"name\")")
+                !name
+            in
+            Ok { name; id })
+      ;;
+  
+      let _ = deserialize_t
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
+  
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db ~id =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s WHERE %s"
+          (Stdlib.String.concat
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"
+             ; Stdlib.Format.sprintf "%s.%s" User.relation "name"
+             ])
+          User.relation
+          "TODO"
+      in
+      let params = [ User.Params.id id ] in
+      Fmt.epr "query: %s@." query;
+      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+    ;;
+  
+    let raw = "SELECT User.id, User.name FROM User WHERE User.id = $id"
+  end [@warning "-32"]
 < language: ocaml
 
   $ pp_query ./lib/where_positional.ml | ocamlformat --impl -
-  Fatal error: exception Failure("TypedColumn")
-  Raised at Stdlib.failwith in file "stdlib.ml", line 29, characters 17-33
-  Called from Base__List.count_map in file "src/list.ml", line 482, characters 13-17
-  Called from Base__List.map in file "src/list.ml" (inlined), line 510, characters 15-31
-  Called from Ppx_query__Gen.of_expressions in file "ppx_query/gen.ml", line 120, characters 14-58
-  Called from Ppx_query__Gen.to_select_string in file "ppx_query/gen.ml", line 100, characters 20-51
-  Called from Ppx_query__Gen.of_ast in file "ppx_query/gen.ml", line 61, characters 21-49
-  Called from Ppx_query.letter_rule.(fun) in file "ppx_query/ppx_query.ml", line 123, characters 23-42
-  Called from Ppxlib__Ast_pattern_generated.pconst_string.(fun) in file "src/ast_pattern_generated.ml", line 612, characters 27-42
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.(^::).(fun) in file "src/ast_pattern.ml", line 110, characters 18-33
-  Called from Ppxlib__Ast_pattern.map_result.(fun) in file "src/ast_pattern.ml", line 170, characters 53-71
-  Called from Ppxlib__Ast_pattern.parse_res in file "src/ast_pattern.ml", line 9, characters 9-36
-  Called from Ppxlib__Extension.For_context.convert_inline_res.(fun) in file "src/extension.ml", line 274, characters 8-66
-  Called from Ppxlib__Context_free.map_top_down#structure.loop in file "src/context_free.ml", line 675, characters 16-73
-  Called from Ppxlib__Context_free.map_top_down#structure.loop.(fun) in file "src/context_free.ml", line 732, characters 20-49
-  Called from Ppxlib__Common.With_errors.(>>=) in file "src/common.ml", line 266, characters 21-24
-  Called from Ppxlib__Driver.Transform.merge_into_generic_mappers.map_impl in file "src/driver.ml", line 280, characters 6-73
-  Called from Ppxlib__Driver.apply_transforms.(fun) in file "src/driver.ml", line 567, characters 19-29
-  Called from Stdlib__List.fold_left in file "list.ml", line 123, characters 24-34
-  Called from Ppxlib__Driver.apply_transforms in file "src/driver.ml", line 543, characters 4-1023
-  Called from Ppxlib__Driver.map_structure_gen in file "src/driver.ml", line 692, characters 4-273
-  Called from Ppxlib__Driver.process_ast in file "src/driver.ml", line 1054, characters 10-127
-  Called from Ppxlib__Driver.process_file in file "src/driver.ml", line 1099, characters 15-111
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1522, characters 9-27
-  Re-raised at Location.report_exception.loop in file "parsing/location.ml", line 1013, characters 14-25
-  Called from Ppxlib__Driver.standalone in file "src/driver.ml", line 1525, characters 4-61
-  Called from Dune__exe__Pp_query in file "bin/pp_query.ml", line 1, characters 9-36
+  module User = struct
+    type t =
+      { id : int
+      ; name : string
+      }
+    [@@deriving table { name = "users" }]
+  
+    include struct
+      [@@@ocaml.warning "-60"]
+  
+      let _ = fun (_ : t) -> ()
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "name" -> Ok `name
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `name
+                | 1 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let name = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `name ->
+                let* v = field ctx "name" string in
+                name := Some v;
+                read_fields ()
+              | Some `id ->
+                let* v = field ctx "id" int in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            let* name =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"name\" (\"name\")")
+                !name
+            in
+            Ok { name; id })
+      ;;
+  
+      let _ = deserialize_t
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let* () = field ctx "id" (int t.id) in
+            let* () = field ctx "name" (string t.name) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+      let relation = "users"
+      let _ = relation
+  
+      module Fields = struct
+        let id = "id"
+        let _ = id
+        let name = "name"
+        let _ = name
+  
+        type id = int [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : id) -> ()
+  
+          open! Serde
+  
+          let deserialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> int ctx
+          ;;
+  
+          let _ = deserialize_id
+  
+          let serialize_id =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> int t ctx
+          ;;
+  
+          let _ = serialize_id
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+        type name = string [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : name) -> ()
+  
+          open! Serde
+  
+          let deserialize_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> string ctx
+          ;;
+  
+          let _ = deserialize_name
+  
+          let serialize_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> string t ctx
+          ;;
+  
+          let _ = serialize_name
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
+      end
+  
+      module Params = struct
+        let id id = Dbcaml.Params.Number id
+        let _ = id
+        let name name = Dbcaml.Params.String name
+        let _ = name
+      end
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  end
+  
+  module UserByID = struct
+    type t = { name : User.Fields.name } [@@deriving serialize, deserialize]
+  
+    include struct
+      let _ = fun (_ : t) -> ()
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "name" -> Ok `name
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `name
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let name = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `name ->
+                let* v = field ctx "name" (d User.Fields.deserialize_name) in
+                name := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* name =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"name\" (\"name\")")
+                !name
+            in
+            Ok { name })
+      ;;
+  
+      let _ = deserialize_t
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
+  
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db p1 p2 =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s WHERE %s"
+          (Stdlib.String.concat
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; p2 ])
+          User.relation
+          "TODO"
+      in
+      let params = [ p1; p2 ] in
+      Fmt.epr "query: %s@." query;
+      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+    ;;
+  
+    let raw = "SELECT User.name, $2 FROM User WHERE User.id = $1"
+  end [@warning "-32"]
 < language: ocaml
 
   $ pp_query ./lib/foreign.ml | ocamlformat --impl -
@@ -443,5 +1183,118 @@ Pretty print the file
       end
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
+< language: ocaml
+
+  $ pp_query ./lib/invalid_model.ml | ocamlformat --impl -
+  module ShouldError = struct
+    type t = { id : Post.Fields.id } [@@deriving serialize, deserialize]
+  
+    include struct
+      let _ = fun (_ : t) -> ()
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let* () = field ctx "id" ((s Post.Fields.serialize_id) t.id) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 1 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "id" -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `id
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let id = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `id ->
+                let* v = field ctx "id" (d Post.Fields.deserialize_id) in
+                id := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* id =
+              Stdlib.Option.to_result
+                ~none:(`Msg "missing field \"id\" (\"id\")")
+                !id
+            in
+            Ok { id })
+      ;;
+  
+      let _ = deserialize_t
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
+  
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s"
+          (Stdlib.String.concat
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" Post.relation "id" ])
+          User.relation
+      in
+      let params = [] in
+      Fmt.epr "query: %s@." query;
+      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+    ;;
+  
+    let raw = "SELECT Post.id from User"
+  end [@warning "-32"]
 < language: ocaml
 

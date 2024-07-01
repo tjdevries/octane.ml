@@ -1,3 +1,4 @@
+open Base
 open Ppxlib
 
 let extender_rule =
@@ -69,6 +70,20 @@ let letter_rule =
       | Ok ast -> ast
       | Error msg -> failwith msg
     in
+    let invalid_model = Oql.Analysis.get_invalid_model ast in
+    let invalid_error =
+      Option.fold
+        invalid_model
+        ~init:(Ast_builder.Default.estring ~loc "hi")
+        ~f:(fun acc invalid_model ->
+          let loc = Oql.Ast.Model.location invalid_model in
+          Ast_builder.Default.pexp_extension ~loc
+          @@ Location.raise_errorf
+               ~loc
+               "Invalid Model: Not selected in query %a"
+               Oql.Ast.Model.pp
+               invalid_model)
+    in
     (* Fmt.epr "@.=====@.query: %s@." query; *)
     (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
@@ -78,12 +93,13 @@ let letter_rule =
         let expressions = get_select_expressions select in
         let fields =
           List.filter_map
-            (fun e ->
+            ~f:(fun e ->
               match e with
-              | Column col ->
+              | Column col -> assert false
+              | ModelField model_field ->
                 let open Ast_builder.Default in
-                let m = "KEKW" in
-                let f_start, f_end, f = col.field in
+                let m = ModelField.model_name model_field in
+                let f_start, f_end, f = model_field.field in
                 let f_loc =
                   Location.
                     { loc_start = f_start; loc_end = f_end; loc_ghost = false }
@@ -130,6 +146,7 @@ let letter_rule =
             end]
         ; [%stri let deserialize = Query.deserialize_query]
         ; query_fn
+        ; [%stri let _ = [%e invalid_error]]
         ]
       | _ -> []
     in
