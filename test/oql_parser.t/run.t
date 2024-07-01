@@ -3,98 +3,91 @@ Execute Test Suite:
   
   ===== ./examples/select_with_constants.sql =====
   (Select
-     { expressions =
-       [(Identifier (Unquoted "unquoted_field"));
-         (Identifier (Unquoted "my_field")); (String (SingleQuote "string"));
-         (BitString "B'010101'"); (Number (Integer 5)); (Number (Numeric 5.));
-         (Number (Numeric 5.)); (Number (Integer 5000));
-         (TypeCast ((Unquoted "bool"), (SingleQuote "yes")));
-         (TypeCast ((Unquoted "bool"), (SingleQuote "yes")));
-         (TypeCast ((Unquoted "bool"), (SingleQuote "yes")));
-         (PositionalParam 1); (PositionalParam 37); (Number (Integer 1));
-         (String (SingleQuote "a string"));
-         (ColumnReference ((Table (Unquoted "tbl")),
-            (Field (<1:237>, <1:240>, (Unquoted "col")))));
-         (ColumnReference ((Table (Unquoted "mytbl")),
-            (Field (<1:250>, <1:255>, (Unquoted "other")))));
-         (Index ((Identifier (Unquoted "arr")), (Specific (Number (Integer 0)))
-            ));
-         (Index ((Identifier (Unquoted "arr")),
-            (Slice ((Identifier (Unquoted "start")),
-               (Identifier (Unquoted "stop"))))
-            ));
-         (Index (
-            (Index (
-               (ColumnReference ((Table (Unquoted "mytable")),
-                  (Field (<1:303>, <1:315>, (Unquoted "two_d_column"))))),
-               (Specific (Number (Integer 17))))),
-            (Specific (Number (Integer 34)))));
-         (ColumnReference ((Table (Unquoted "tbl")),
-            (Field (<1:352>, <1:356>, (Unquoted "col2")))));
-         (ColumnReference ((Table (Unquoted "tbl")), Star));
-         (String (SingleQuote "the end"))];
-       relation = None; where = None })
+     { select =
+       { result_kind = None;
+         result_columns =
+         [(Expression (
+             (Column
+                { Ast.Column.schema = None; table = None;
+                  field = (<1:7>, <1:12>, "field") }),
+             None))
+           ]
+         };
+       from = None; where = None })
   
   ===== ./examples/simple_select.sql =====
   (Select
-     { expressions = [(Identifier (Unquoted "name"))];
-       relation = (Some "Users"); where = None })
+     { select =
+       { result_kind = None;
+         result_columns =
+         [(Expression (
+             (Column
+                { Ast.Column.schema = None; table = None;
+                  field = (<1:7>, <1:11>, "name") }),
+             None))
+           ]
+         };
+       from =
+       (Some { relation = [(Module (<1:17>, <1:22>, "Users"))]; join = None });
+       where = None })
   
   ===== ./examples/from.sql =====
   (Select
-     { expressions =
-       [(ColumnReference ((Table (Module "User")),
-           (Field (<1:12>, <1:14>, (Unquoted "id")))))
-         ];
-       relation = (Some "User");
-       where =
-       (Some (BinaryExpression (
-                (ColumnReference ((Table (Module "User")),
-                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
-                Eq, (Number (Integer 1)))))
-       })
+     { select =
+       { result_kind = None;
+         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+       from =
+       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
+       where = None })
   
   ===== ./examples/from_with_positional_param.sql =====
   (Select
-     { expressions =
-       [(ColumnReference ((Table (Module "User")),
-           (Field (<1:12>, <1:14>, (Unquoted "id")))))
-         ];
-       relation = (Some "User");
+     { select =
+       { result_kind = None;
+         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+       from =
+       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
        where =
-       (Some (BinaryExpression (
-                (ColumnReference ((Table (Module "User")),
-                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
-                Eq, (PositionalParam 1))))
+       (Some (BinaryExpression ((TypedColumn ("User", "id")), Eq,
+                (PositionalParam 1))))
        })
   
   ===== ./examples/from_with_named_param.sql =====
   (Select
-     { expressions =
-       [(ColumnReference ((Table (Module "User")),
-           (Field (<1:12>, <1:14>, (Unquoted "id")))))
-         ];
-       relation = (Some "User");
+     { select =
+       { result_kind = None;
+         result_columns = [(Expression ((TypedColumn ("User", "id")), None))] };
+       from =
+       (Some { relation = [(Module (<1:20>, <1:24>, "User"))]; join = None });
        where =
-       (Some (BinaryExpression (
-                (ColumnReference ((Table (Module "User")),
-                   (Field (<1:36>, <1:38>, (Unquoted "id"))))),
-                Eq, (NamedParam "id"))))
+       (Some (BinaryExpression ((TypedColumn ("User", "id")), Eq,
+                (NamedParam "id"))))
        })
   
   ===== ./examples/operators.sql =====
   (Select
-     { expressions =
-       [(BinaryExpression ((Number (Integer 1)), Add, (Number (Integer 2))));
-         (BinaryExpression ((Number (Integer 1)), Add,
-            (BinaryExpression ((Number (Integer 2)), Mul, (Number (Integer 3))
-               ))
-            ));
-         (UnaryExpression (Neg, (Number (Integer 1))));
-         (FunctionCall ((Unquoted "sqrt"),
-            [(BinaryExpression ((Number (Integer 2)), Add, (Number (Integer 3))
-                ))
-              ]
-            ));
-         (String (SingleQuote "end"))];
-       relation = None; where = None })
+     { select =
+       { result_kind = None;
+         result_columns =
+         [(Expression (
+             (BinaryExpression ((NumericLiteral (Integer 1)), Add,
+                (NumericLiteral (Integer 2)))),
+             None));
+           (Expression (
+              (BinaryExpression ((NumericLiteral (Integer 1)), Add,
+                 (BinaryExpression ((NumericLiteral (Integer 2)), Mul,
+                    (NumericLiteral (Integer 3))))
+                 )),
+              None));
+           (Expression ((UnaryExpression (Neg, (NumericLiteral (Integer 1)))),
+              None));
+           (Expression (
+              (FunctionCall ((<1:29>, <1:33>, "sqrt"),
+                 [(BinaryExpression ((NumericLiteral (Integer 2)), Add,
+                     (NumericLiteral (Integer 3))))
+                   ]
+                 )),
+              None));
+           (Expression ((StringLiteral (SingleQuote "end")), None))]
+         };
+       from = None; where = None })

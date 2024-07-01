@@ -73,15 +73,17 @@ let letter_rule =
     (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
       match ast with
-      | Oql.Ast.Select { expressions; relation = Some relation; where } ->
+      | Oql.Ast.Select { select; from = Some relation; where } ->
         let open Oql.Ast in
+        let expressions = get_select_expressions select in
         let fields =
           List.filter_map
             (fun e ->
               match e with
-              | ColumnReference
-                  (Table (Module m), Field (f_start, f_end, Unquoted f)) ->
+              | Column col ->
                 let open Ast_builder.Default in
+                let m = "KEKW" in
+                let f_start, f_end, f = col.field in
                 let f_loc =
                   Location.
                     { loc_start = f_start; loc_end = f_end; loc_ghost = false }
@@ -118,7 +120,7 @@ let letter_rule =
         let type_decl =
           Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
         in
-        let query_expr = Gen.to_query_string ~loc ast in
+        let query_fn = Gen.of_ast ~loc ast in
         (* [%p arg1] *)
         (* let arg1 = Ast_builder.Default.ppat_var ~loc (Loc.make ~loc "db") in *)
         [ type_decl
@@ -127,12 +129,7 @@ let letter_rule =
               type query = t list [@@deriving deserialize, serialize]
             end]
         ; [%stri let deserialize = Query.deserialize_query]
-        ; [%stri
-            let query db =
-              let query = [%e query_expr] in
-              Fmt.epr "query: %s@." query;
-              Silo_postgres.query db ~query ~deserializer:deserialize
-            ;;]
+        ; query_fn
         ]
       | _ -> []
     in

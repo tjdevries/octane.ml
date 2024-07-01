@@ -1,13 +1,3 @@
-let lex (s : string) : Parser.token list =
-  let lexbuf = Lexing.from_string s in
-  let rec loop tokens =
-    match Lexer.read lexbuf with
-    | EOF -> List.rev tokens
-    | token -> loop (token :: tokens)
-  in
-  loop []
-;;
-
 module I = Parser.MenhirInterpreter
 
 let succeed v = Ok v
@@ -23,7 +13,9 @@ let loop lexbuf result =
   let rec skip_comments buf =
     match Lexer.read buf with
     | COMMENT -> skip_comments buf
-    | token -> token
+    | token ->
+      (* Fmt.pr "Handling token: %a@." Tokenize.pp_token token; *)
+      token
   in
   let supplier = I.lexer_lexbuf_to_supplier skip_comments lexbuf in
   I.loop_handle succeed (fail lexbuf) supplier result

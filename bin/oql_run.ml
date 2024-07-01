@@ -15,6 +15,15 @@ module User = struct
   [@@deriving table { name = "users" }]
 end
 
+module Post = struct
+  type t =
+    { id : int
+    ; author : User.Fields.id
+    ; content : string
+    }
+  [@@deriving table { name = "posts" }]
+end
+
 let%query (module UserName) = "SELECT User.id, User.name FROM User"
 
 let example db =
@@ -22,6 +31,28 @@ let example db =
   let users = Option.value users ~default:[] in
   List.iter users ~f:(fun { id; name } ->
     Fmt.pr "@.We read this from the database: %d - %s@." id name);
+  Ok ()
+;;
+
+(* TODO: Should be an error *)
+let%query (module GetPost) =
+  "SELECT User.id, Post.author, Post.content FROM Post WHERE Post.id = $id"
+;;
+
+let _ = "Post.Author.name"
+
+let _ =
+  {| SELECT User.name, Post.content
+      FROM Post INNER JOIN User ON User.id = Post.author
+      WHERE Post.id = $id
+    |}
+;;
+
+let get_post_example db =
+  let* post = GetPost.query db ~id:1 in
+  let post = Option.value post ~default:[] in
+  List.iter post ~f:(fun { author; content } ->
+    Fmt.pr "@.Post: %d - %s@." author content);
   Ok ()
 ;;
 
@@ -56,7 +87,7 @@ let () =
       Silo_postgres.config
         ~connections:2
         ~connection_string:
-          "postgresql://tjdevries:password@localhosting:5434/oql?sslmode=disable"
+          "postgresql://tjdevries:password@localhosting:5432/oql?sslmode=disable"
     in
     match Silo_postgres.connect ~config with
     | Ok c -> Ok c

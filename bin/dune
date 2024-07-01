@@ -14,6 +14,14 @@
  (libraries oql octane fmt bos core))
 
 (executable
+ (public_name oql_lex)
+ (package octane)
+ (name oql_lex)
+ (modules oql_lex)
+ (libraries oql octane fmt bos core))
+
+
+(executable
   (name oql_run)
   (public_name oql_run)
   (package oql)

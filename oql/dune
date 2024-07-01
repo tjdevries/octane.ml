@@ -1,8 +1,9 @@
 (library
  (name oql)
  (public_name oql)
- (libraries menhirLib fmt)
- (preprocess (pps ppx_deriving.std)))
+ (libraries menhirLib fmt dbcaml)
+ (inline_tests)
+ (preprocess (pps ppx_deriving.std ppx_jane)))
 
 (ocamllex lexer)
 

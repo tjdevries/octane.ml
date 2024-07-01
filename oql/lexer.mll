@@ -3,7 +3,7 @@ open Parser
 }
 
 (* SQL identifiers and key words must begin with a letter (a-z, but also letters with diacritical marks and non-Latin letters) or an underscore (_). Subsequent characters in an identifier or key word can be letters, underscores, digits (0-9), or dollar signs ($). Note that dollar signs are not allowed in identifiers according to the letter of the SQL standard, so their use might render applications less portable. The SQL standard will not define a key word that contains digits or starts or ends with an underscore, so identifiers of this form are safe against possible conflict with future extensions of the standard. *)
-let identifier = ['a'-'z']['a'-'z' 'A'-'Z' '_' '0'-'9' '$']*
+let name = ['a'-'z']['a'-'z' 'A'-'Z' '_' '0'-'9' '$']*
 
 (* OCaml Modules are going to be listed like `User.name` - so we're going to differentiate between
    those in our oql *)
@@ -16,6 +16,8 @@ let select = ['s' 'S']['e' 'E']['l' 'L']['e' 'E']['c' 'C']['t' 'T']
 let from = ['f' 'F']['r' 'R']['o' 'O']['m' 'M']
 let where = ['w' 'W']['h' 'H']['e' 'E']['r' 'R']['e' 'E']
 let null = ['n' 'N']['u' 'U']['l' 'L']['l' 'L']
+let true_ = ['t' 'T']['r' 'R']['u' 'U']['e' 'E']
+let false_ = ['f' 'F']['a' 'A']['l' 'L']['s' 'S']['e' 'E']
 let cast = ['c' 'C']['a' 'A']['s' 'S']['t' 'T']
 let as_ = ['a' 'A']['s' 'S']
 
@@ -53,7 +55,6 @@ let named_param = '$' ['a'-'z']+
 (* TODO: Multi-line C-style comments *)
 let comment = '-' '-' [^'\n']* '\n'
 
-
 rule read = 
   parse 
   | white { read lexbuf }
@@ -86,6 +87,8 @@ rule read =
   }
   | comment { COMMENT }
   | null { NULL }
+  | true_ { TRUE }
+  | false_ { FALSE }
   | select { SELECT }
   | from { FROM }
   | where { WHERE }
@@ -100,9 +103,9 @@ rule read =
   | integer { INTEGER (int_of_string (Lexing.lexeme lexbuf)) }
   | number { NUMBER (float_of_string (Lexing.lexeme lexbuf)) }
   | m { MODULE (Lexing.lexeme lexbuf) }
-  | identifier { IDENTIFIER (Lexing.lexeme lexbuf) }
+  | name { NAME (Lexing.lexeme lexbuf) }
   | quoted_identifier { 
       let quoted_string = Lexing.lexeme lexbuf in
-      IDENTIFIER (String.sub quoted_string 1 (String.length quoted_string - 2))
+      NAME (String.sub quoted_string 1 (String.length quoted_string - 2))
     }
   | eof { EOF }

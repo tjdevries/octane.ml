@@ -7,7 +7,6 @@ open Ast
    - https://github.com/tobymao/sqlglot/tree/main/tests*)
 
 %token <string> MODULE
-%token <string> IDENTIFIER
 %token <string> STRING
 %token <string> BITSTRING
 %token <int> INTEGER
@@ -15,7 +14,14 @@ open Ast
 %token <int> POSITIONAL_PARAM
 %token <string> NAMED_PARAM
 
+%token <string> NAME
+%token <string * string> TABLE_NAME
+%token <string * string * string> SCHEMA_NAME
+
 %token COMMENT
+
+(* Select Keywords *)
+%token DISTINCT ALL
 
 (* operators *)
 %token PLUS MINUS SLASH PERCENT
@@ -25,7 +31,7 @@ open Ast
 %token IS ISNULL NOTNULL
 
 %token SELECT FROM CAST AS WHERE
-%token STAR NULL
+%token STAR NULL TRUE FALSE
 %token COMMA DOT SEMICOLON COLON DOUBLE_COLON
 %token LPAR RPAR LBRACKET RBRACKET LBRACE RBRACE
 %token EOF
@@ -52,38 +58,81 @@ open Ast
 %start <Ast.t> query
 %%
 
+let name :=
+  | name = NAME; { $startpos, $endpos, name }
+
 let query :=
-  | SELECT; ~ = expressions; ~ = from; ~ = where; SEMICOLON?; EOF;
-      { Select { expressions; relation = from; where } }
+  | SELECT; ~ = select; from = option(from); where = option(where); SEMICOLON?; EOF;
+      { Select { select; from; where } }
+
+let select :=
+  | result_kind = option(result_kind); ~ = result_columns; { { result_kind; result_columns } }
+
+let result_kind :=
+  | DISTINCT; { Distinct }
+  | ALL; { All }
+
+let result_columns :=
+  | results = separated_nonempty_list(COMMA, result_column); { results }
+
+let result_column :=
+  | STAR; { Star }
+  | expression = expression; { Expression (expression, None) }
 
 let from := 
-  | { None }
-  | FROM; m = MODULE; { Some m }
+  | FROM; relation = separated_list(COMMA, table_or_subquery); { { relation; join = None } }
 
 let where :=
-  | { None }
-  | WHERE; ~ = expression; { Some expression }
+  | WHERE; ~ = expression; { expression }
 
-let expressions :=
-  | separated_list(COMMA, expression)
+let table_or_subquery :=
+  | m = MODULE; { Module (Module.make ($startpos, $endpos, m)) }
+  | ~ = name; { Table (Table.make name) }
+  (* | t = IDENTIFIER; { Table (Table.of_string t) } *)
 
 let expression :=
-  | typecast
-  | ~ = identifier; <Identifier>
-  | ~ = string; <String>
+  | ~ = number; <NumericLiteral>
+  | ~ = string; <StringLiteral>
+  | NULL; { Null }
+  | TRUE; { BooleanLiteral true }
+  | FALSE; { BooleanLiteral false }
+  | column = column; { column }
   | ~ = BITSTRING; <BitString>
-  | ~ = number; <Number>
+  (* | typecast *)
   | ~ = POSITIONAL_PARAM; <PositionalParam>
   | ~ = NAMED_PARAM; <NamedParam>
-  (* | ~ = INTEGER; <Integer> *)
-  (* | ~ = NUMBER; <Number> *)
-  | delimited(LPAR, expression, RPAR)
-  | ~ = correlation; DOT; ~ = field; <ColumnReference>
-  | ~ = expression; LBRACKET; ~ = index; RBRACKET; <Index>
+  (* | delimited(LPAR, expression, RPAR) *)
+  (* | ~ = expression; LBRACKET; ~ = index; RBRACKET; <Index> *)
   | binop
   | unop
   | function_call
-  | NULL; { Null }
+
+let field :=
+  | ~ = name; { 
+    let field = Field.make name in
+    Column (Column.make None None field)
+  }
+  | m = MODULE; DOT; name = NAME; { TypedColumn (m, name) }
+
+let column :=
+  | ~ = field; { field }
+  | ~ = schema; { schema }
+  | ~ = table; { table }
+
+let schema := 
+  | schema = name; DOT; table = name; DOT; field = name; {
+    let schema = Schema.make schema in
+    let table = Table.make table in
+    let field = Field.make field in
+    Column (Column.make (Some schema) (Some table) field)
+  }
+
+let table := 
+  | table = name; DOT; field = name; {
+    let table = Table.make table in
+    let field = Field.make field in
+    Column (Column.make None (Some table) field)
+  }
 
 let binop :=
   | (left, right) = binoprule(PLUS); { BinaryExpression (left, Add, right) }
@@ -105,14 +154,13 @@ let unop :=
   | ~ = PLUS; ~ = expression; { UnaryExpression (Pos, expression) }
 
 let function_call :=
-  | ~ = identifier; args = delimited(LPAR, separated_list(COMMA, expression), RPAR); <FunctionCall>
+  | ~ = func_name; args = delimited(LPAR, separated_list(COMMA, expression), RPAR); <FunctionCall>
 
-let identifier :=
-  | ~ = IDENTIFIER; <Unquoted>
+let func_name := 
+  | ~ = name; { FuncName.make name }
 
-let field :=
-  | ~ = identifier; { Field ($startpos, $endpos, identifier) }
-  | STAR; { Star }
+let type_name := 
+  | ~ = name; { TypeName.make name }
 
 let string :=
   | ~ = STRING; <SingleQuote>
@@ -123,16 +171,9 @@ let number :=
 
 (* https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-CONSTANTS-GENERIC *)
 let typecast := 
-  | ~ = identifier; ~ = string; <TypeCast>
-  | ~ = string; DOUBLE_COLON; ~ = identifier; { TypeCast (identifier, string) }
-  | CAST; LPAR; ~ = string; AS; ~ = identifier; RPAR; { TypeCast (identifier, string) }
-
-let correlation :=
-  | ~ = identifier; <Table>
-  | m = MODULE; { Table (Module m) }
-
-  (* tbh, this doesn't feel great *)
-  (* | ~ = MODULE; <SelectionExpression> *)
+  | ~ = type_name; ~ = string; <TypeCast>
+  | ~ = string; DOUBLE_COLON; ~ = name; { TypeCast (TypeName.make name, string) }
+  (* | CAST; LPAR; ~ = string; AS; ~ = identifier; RPAR; { TypeCast (identifier, string) } *)
 
 let index :=
   | ~ = expression; <Specific>

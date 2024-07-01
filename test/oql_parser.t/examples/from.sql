@@ -1,1 +1,1 @@
-SELECT User.id FROM User WHERE User.id = 1
+SELECT User.id FROM User
