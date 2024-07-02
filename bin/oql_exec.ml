@@ -28,7 +28,6 @@ let%query (module UserName) = "SELECT User.id, User.name FROM User"
 
 let example db =
   let* users = UserName.query db in
-  let users = Option.value users ~default:[] in
   List.iter users ~f:(fun { id; name } ->
     Fmt.pr "@.We read this from the database: %d - %s@." id name);
   Ok ()
@@ -43,7 +42,6 @@ let%query (module GetPost) =
 
 let get_post_example db =
   let* post = GetPost.query db ~user_id:1 in
-  let post = Option.value post ~default:[] in
   List.iter post ~f:(fun { name; content } ->
     Fmt.pr "Post: %s - %s@." name content);
   Ok ()
@@ -92,14 +90,9 @@ let () =
     | Ok one -> one
     | Error e -> failwith e
   in
-  let _ =
-    match users with
-    | Some users ->
-      List.iter
-        ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
-        users
-    | _ -> Fmt.pr "@.Shouldn't be possible@."
-  in
+  List.iter
+    ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
+    users;
   let* _ = get_post_example db in
   Ok 1
 ;;

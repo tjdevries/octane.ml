@@ -322,7 +322,14 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      let result =
+        Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      in
+      Stdlib.Result.map
+        (function
+          | Some list -> list
+          | None -> [])
+        result
     ;;
   
     let raw = "select User.id, User.name from User"
@@ -563,7 +570,14 @@ Pretty print the file
       in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
-      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      let result =
+        Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      in
+      Stdlib.Result.map
+        (function
+          | Some list -> list
+          | None -> [])
+        result
     ;;
   
     let raw = "SELECT User.id, User.name FROM User WHERE User.id = $id"
@@ -829,7 +843,14 @@ Pretty print the file
       in
       let params = [ p1; p2 ] in
       Fmt.epr "query: %s@." query;
-      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      let result =
+        Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      in
+      Stdlib.Result.map
+        (function
+          | Some list -> list
+          | None -> [])
+        result
     ;;
   
     let raw = "SELECT User.name, $2 FROM User WHERE User.id = $1"
@@ -1339,7 +1360,14 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      let result =
+        Silo_postgres.query db ~query ~params ~deserializer:deserialize
+      in
+      Stdlib.Result.map
+        (function
+          | Some list -> list
+          | None -> [])
+        result
     ;;
   
     let raw =

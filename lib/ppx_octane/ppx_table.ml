@@ -82,7 +82,7 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   let ser =
     Serde_derive.Ser.generate_impl ~ctxt (_rec_flag, type_declarations)
   in
-  print_stuff name ();
+  if false then print_stuff name ();
   deser
   @ ser
   @ [ [%stri let relation = [%e ename]]
