@@ -1,4 +1,4 @@
 (library
  (name octane)
  (libraries dbcaml silo-postgres)
- (preprocess (pps ppx_query)))
+ (preprocess (pps ppx_octane)))

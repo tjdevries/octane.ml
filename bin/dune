@@ -4,7 +4,7 @@
  (name main)
  (modules main)
  (libraries octane caqti caqti-dynload caqti.blocking)
- (preprocess (pps ppx_query)))
+ (preprocess (pps ppx_octane)))
 
 (executable
  (public_name oql_parse)
@@ -27,12 +27,12 @@
   (package oql)
   (modules oql_exec)
   (libraries oql octane fmt bos silo-postgres dbcaml riot serde base)
-  (preprocess (pps serde_derive ppx_query)))
+  (preprocess (pps serde_derive ppx_octane)))
 
 (executable
   (name pp_query)
   (public_name pp_query)
   (package oql)
   (modules pp_query)
-  (libraries ppxlib ppx_query)
-  (preprocess (pps ppx_query)))
+  (libraries ppxlib ppx_octane)
+  (preprocess (pps ppx_octane)))

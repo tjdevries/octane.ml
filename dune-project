@@ -31,10 +31,10 @@
  (tags (topics "oql")))
 
 (package
- (name ppx_query)
- (synopsis "Cool ppxs for queries")
- (description "Cool ppxs for queries")
- (depends ocaml dune ppxlib)
+ (name ppx_octane)
+ (synopsis "PPX for deriving octane tables, queries and more")
+ (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
+ (depends ocaml dune ppxlib oql)
  (tags
   (topics "to describe" your project)))
 

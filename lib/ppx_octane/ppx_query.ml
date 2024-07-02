@@ -181,4 +181,6 @@ let letter_rule =
   Context_free.Rule.extension my_extender
 ;;
 
-Driver.register_transformation ~rules:[ extender_rule; letter_rule ] "ppx_query"
+Driver.register_transformation
+  ~rules:[ extender_rule; letter_rule ]
+  "ppx_octane"

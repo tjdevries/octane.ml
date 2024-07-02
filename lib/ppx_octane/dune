@@ -5,9 +5,9 @@
 ;  (preprocess (pps ppxlib.metaquot ppx_combust)))
 
 (library
- (name ppx_query)
+ (name ppx_octane)
  (kind ppx_deriver)
- (package ppx_query)
+ (package ppx_octane)
  (flags (:standard -w -27))
  (libraries ppxlib base fmt ppx_deriving.api oql serde_derive bos)
  (preprocess
