@@ -2,6 +2,13 @@ open Base
 open Ppxlib
 open Ast_builder
 
+let print_stuff name () =
+  match Bos.OS.Dir.current (), name with
+  | Ok dir, Some name ->
+    Fmt.pr "current dir: %s // %s@." (Fpath.to_string dir) name
+  | _ -> Fmt.pr "cannot get current dir@."
+;;
+
 let f payload =
   let checker =
     object
@@ -29,7 +36,7 @@ let get_field_constructor ~loc ename pld_type =
     | Ldot (Ldot (Lident m, "Fields"), f) ->
       let module_param = Gen.module_param ~loc m f in
       [%expr [%e module_param] [%e ename]]
-    | Ldot _ -> failwith "TODO: unknwon ldot"
+    | Ldot _ -> failwith "TODO: unknown ldot"
     | Lapply (_, _) -> failwith "TODO: Lapply"
   end
   | _ -> failwith "TODO: field_params"
@@ -40,7 +47,7 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   let ty = List.hd_exn type_declarations in
   let names = f ty in
   let loc = Expansion_context.Deriver.derived_item_loc ctxt in
-  let name =
+  let ename =
     match name with
     | Some name -> Default.estring ~loc name
     | None -> failwith "name is required"
@@ -75,9 +82,10 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   let ser =
     Serde_derive.Ser.generate_impl ~ctxt (_rec_flag, type_declarations)
   in
+  print_stuff name ();
   deser
   @ ser
-  @ [ [%stri let relation = [%e name]]
+  @ [ [%stri let relation = [%e ename]]
     ; [%stri module Fields = [%m field_module]]
     ; [%stri module Params = [%m params_module]]
     ]

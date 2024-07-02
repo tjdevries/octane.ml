@@ -1,29 +1,27 @@
 (lang dune 3.14)
 
 (name octane)
+(generate_opam_files true)
 
 (using menhir 3.0)
 
-(generate_opam_files true)
-
 (source
- (github username/reponame))
+ (github tjdevries/octane.ml))
 
-(authors "Author Name")
+(license MIT)
 
-(maintainers "Maintainer Name")
+(authors "TJ DeVries")
+(maintainers "TJ DeVries")
 
-(license LICENSE)
-
-(documentation https://url/to/documentation)
+; (documentation https://url/to/documentation)
 
 (package
  (name octane)
- (synopsis "A short synopsis")
- (description "A longer description")
+ (synopsis "The fastest, hottest")
+ (description "The fastest, hottest")
  (depends ocaml dune)
  (tags
-  (topics "to describe" your project)))
+  (topics "sql" "database" "query builder")))
 
 (package
  (name oql)

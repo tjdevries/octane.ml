@@ -1,4 +1,4 @@
 (library
  (name octane)
- (libraries caqti caqti-driver-sqlite3 dbcaml silo-postgres)
+ (libraries dbcaml silo-postgres)
  (preprocess (pps ppx_query)))
