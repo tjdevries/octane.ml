@@ -21,6 +21,17 @@ let false_ = ['f' 'F']['a' 'A']['l' 'L']['s' 'S']['e' 'E']
 let cast = ['c' 'C']['a' 'A']['s' 'S']['t' 'T']
 let as_ = ['a' 'A']['s' 'S']
 
+let on = ['o' 'O']['n' 'N']
+let using = ['u' 'U']['s' 'S']['i' 'I']['n' 'N']['g' 'G']
+
+let left = ['l' 'L']['e' 'E']['f' 'F']['t' 'T']
+let right = ['r' 'R']['i' 'I']['g' 'G']['h' 'H']['t' 'T']
+let full = ['f' 'F']['u' 'U']['l' 'L']['l' 'L']
+let inner = ['i' 'I']['n' 'N']['n' 'N']['e' 'E']['r' 'R']
+let natural = ['n' 'N']['a' 'A']['t' 'T']['u' 'U']['r' 'R']['a' 'A']['l' 'L']
+let outer = ['o' 'O']['u' 'U']['t' 'T']['e' 'E']['r' 'R']
+let cross = ['c' 'C']['r' 'R']['o' 'O']['s' 'S']['s' 'S']
+let join = ['j' 'J']['o' 'O']['i' 'I']['n' 'N']
 
 (* the sql string regex *)
 (* TODO: Strings that are separated by at least one new line are concatentated into a single string *)
@@ -48,7 +59,7 @@ let number = digits '.' digits? ('e' ['+' '-']? digits)?
 (* TODO: Custom Operators https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-OPERATORS *)
 
 let positional_param = '$' ['1'-'9']['0'-'9']*
-let named_param = '$' ['a'-'z']+
+let named_param = '$' ['a'-'z' '_']+
 
 (* TODO: Arrays, but they are in chaper 8 *)
 
@@ -94,6 +105,16 @@ rule read =
   | where { WHERE }
   | cast { CAST }
   | as_ { AS }
+  | left { LEFT }
+  | right { RIGHT }
+  | full { FULL }
+  | inner { INNER }
+  | natural { NATURAL }
+  | outer { OUTER }
+  | cross { CROSS }
+  | join { JOIN }
+  | on { ON }
+  | using { USING }
   | string {
         let quoted_string = Lexing.lexeme lexbuf in
         STRING (String.sub quoted_string 1 (String.length quoted_string - 2))

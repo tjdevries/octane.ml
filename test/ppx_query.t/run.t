@@ -1187,114 +1187,22 @@ Pretty print the file
 
   $ pp_query ./lib/invalid_model.ml | ocamlformat --impl -
   module ShouldError = struct
-    type t = { id : Post.Fields.id } [@@deriving serialize, deserialize]
-  
-    include struct
-      let _ = fun (_ : t) -> ()
-  
-      let serialize_t =
-        let ( let* ) = Stdlib.Result.bind in
-        let _ = ( let* ) in
-        let open Serde.Ser in
-        fun t ctx ->
-          record ctx "t" 1 (fun ctx ->
-            let* () = field ctx "id" ((s Post.Fields.serialize_id) t.id) in
-            Ok ())
-      ;;
-  
-      let _ = serialize_t
-  
-      open! Serde
-  
-      let deserialize_t =
-        let ( let* ) = Stdlib.Result.bind in
-        let _ = ( let* ) in
-        let open Serde.De in
-        fun ctx ->
-          record ctx "t" 1 (fun ctx ->
-            let field_visitor =
-              let visit_string _ctx str =
-                match str with
-                | "id" -> Ok `id
-                | _ -> Ok `invalid_tag
-              in
-              let visit_int _ctx str =
-                match str with
-                | 0 -> Ok `id
-                | _ -> Ok `invalid_tag
-              in
-              Visitor.make ~visit_string ~visit_int ()
-            in
-            let id = ref None in
-            let rec read_fields () =
-              let* tag = next_field ctx field_visitor in
-              match tag with
-              | Some `id ->
-                let* v = field ctx "id" (d Post.Fields.deserialize_id) in
-                id := Some v;
-                read_fields ()
-              | Some `invalid_tag ->
-                let* () = ignore_any ctx in
-                read_fields ()
-              | None -> Ok ()
-            in
-            let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            Ok { id })
-      ;;
-  
-      let _ = deserialize_t
-    end [@@ocaml.doc "@inline"] [@@merlin.hide]
-  
-    module Query = struct
-      type query = t list [@@deriving deserialize, serialize]
-  
-      include struct
-        let _ = fun (_ : query) -> ()
-  
-        open! Serde
-  
-        let deserialize_query =
-          let ( let* ) = Stdlib.Result.bind in
-          let _ = ( let* ) in
-          let open Serde.De in
-          fun ctx -> (d (list (d deserialize_t))) ctx
-        ;;
-  
-        let _ = deserialize_query
-  
-        let serialize_query =
-          let ( let* ) = Stdlib.Result.bind in
-          let _ = ( let* ) in
-          let open Serde.Ser in
-          fun t ctx -> (s (list (s serialize_t))) t ctx
-        ;;
-  
-        let _ = serialize_query
-      end [@@ocaml.doc "@inline"] [@@merlin.hide]
-    end
-  
-    let deserialize = Query.deserialize_query
-  
-    let query db =
-      let query =
-        Stdlib.Format.sprintf
-          "SELECT %s FROM %s"
-          (Stdlib.String.concat
-             ", "
-             [ Stdlib.Format.sprintf "%s.%s" Post.relation "id" ])
-          User.relation
-      in
-      let params = [] in
-      Fmt.epr "query: %s@." query;
-      Silo_postgres.query db ~query ~params ~deserializer:deserialize
-    ;;
+    type t =
+      [%ocaml.error "Invalid Model: Module 'Post' is not selected in query"]
   
     let raw = "SELECT Post.id from User"
+  end [@warning "-32"]
+< language: ocaml
+
+  $ pp_query ./lib/simple_join.ml | ocamlformat --impl -
+  module AuthorAndContent = struct
+    type t =
+      [%ocaml.error "Invalid Model: Module 'User' is not selected in query"]
+  
+    let raw =
+      " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = \
+       Post.author "
+    ;;
   end [@warning "-32"]
 < language: ocaml
 

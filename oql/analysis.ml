@@ -1,12 +1,11 @@
 open Base
 
-type rule = string
-
 let get_valid_models ast =
   let open Ast in
   match ast with
   | Select { from = Some from; _ } ->
-    List.filter_map from.relation ~f:(function
+    FromClause.relations from
+    |> List.filter_map ~f:(function
       | Model m -> Some m
       | _ -> None)
     |> List.dedup_and_sort ~compare:Model.compare
@@ -18,7 +17,8 @@ let get_models_from_expression expr =
   let rec search expr acc =
     match expr with
     | ModelField m -> m :: acc
-    | NumericLiteral _ -> acc
+    | BinaryExpression (left, _, right) -> acc |> search left |> search right
+    | UnaryExpression (_, expr) -> search expr acc
     | _ -> acc
   in
   search expr []
@@ -28,7 +28,6 @@ let get_used_models ast =
   let open Ast in
   match ast with
   | Select { select = { result_columns; _ }; _ } ->
-    (* TODO: check where *)
     List.fold_left result_columns ~init:[] ~f:(fun acc ->
         function
         | Expression (expr, _) -> get_models_from_expression expr @ acc
@@ -88,7 +87,7 @@ let find_params (ast : Ast.t) =
 let get_type_of_expression expr =
   let open Ast in
   match expr with
-  | ModelField m as expr -> Some expr
+  | ModelField _ as expr -> Some expr
   (* | ColumnReference (Table (Module m), f) as e -> Some e *)
   | _ -> None
 ;;
@@ -97,10 +96,10 @@ let get_type_of_named_param ast param =
   let open Ast in
   let rec search expr =
     match expr with
-    | BinaryExpression (left, op, right) when Ast.equal_expression right param
+    | BinaryExpression (left, _op, right) when Ast.equal_expression right param
       -> get_type_of_expression left
-    | BinaryExpression (left, op, right) when Ast.equal_expression left param ->
-      failwith "param matches left"
+    | BinaryExpression (left, _op, _right) when Ast.equal_expression left param
+      -> failwith "param matches left"
     | BinaryExpression (_left, _op, _right) -> None
     | UnaryExpression (_, expr) -> search expr
     | FunctionCall (_, _) -> failwith "function call"

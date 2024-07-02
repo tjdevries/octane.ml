@@ -35,23 +35,17 @@ let example db =
 ;;
 
 let%query (module GetPost) =
-  {| SELECT Post.author, Post.content
+  {| SELECT User.name, Post.author, Post.content
       FROM Post
-      WHERE Post.id = $id |}
-;;
-
-let _ =
-  {| SELECT User.name, Post.content
-      FROM Post INNER JOIN User ON User.id = Post.author
-      WHERE Post.id = $id
-    |}
+        INNER JOIN User ON User.id = Post.author
+        WHERE User.id = $user_id |}
 ;;
 
 let get_post_example db =
-  let* post = GetPost.query db ~id:1 in
+  let* post = GetPost.query db ~user_id:1 in
   let post = Option.value post ~default:[] in
-  List.iter post ~f:(fun { author; content } ->
-    Fmt.pr "@.Post: %d - %s@." author content);
+  List.iter post ~f:(fun { name; content } ->
+    Fmt.pr "Post: %s - %s@." name content);
   Ok ()
 ;;
 
@@ -102,9 +96,10 @@ let () =
     match users with
     | Some users ->
       List.iter
-        ~f:(fun { id; name } -> Fmt.pr "@.This is from riot: %d - %s@." id name)
+        ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
         users
     | _ -> Fmt.pr "@.Shouldn't be possible@."
   in
+  let* _ = get_post_example db in
   Ok 1
 ;;

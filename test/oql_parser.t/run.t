@@ -7,9 +7,7 @@ Execute Test Suite:
        { result_kind = None;
          result_columns =
          [(Expression (
-             (Column
-                { Ast.Column.schema = None; table = None;
-                  field = (<1:7>, <1:12>, "field") }),
+             (Column { Ast.Column.schema = None; table = None; field = field }),
              None))
            ]
          };
@@ -21,15 +19,11 @@ Execute Test Suite:
        { result_kind = None;
          result_columns =
          [(Expression (
-             (Column
-                { Ast.Column.schema = None; table = None;
-                  field = (<1:7>, <1:11>, "name") }),
+             (Column { Ast.Column.schema = None; table = None; field = name }),
              None))
            ]
          };
-       from =
-       (Some { relation = [(Model (<1:17>, <1:22>, "Users"))]; join = None });
-       where = None })
+       from = (Some (From [(Model Users)])); where = None })
   
   ===== ./examples/from.sql =====
   (Select
@@ -37,15 +31,10 @@ Execute Test Suite:
        { result_kind = None;
          result_columns =
          [(Expression (
-             (ModelField
-                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
-                  field = (<1:12>, <1:14>, "id") }),
-             None))
+             (ModelField { Ast.ModelField.model = User; field = id }), None))
            ]
          };
-       from =
-       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
-       where = None })
+       from = (Some (From [(Model User)])); where = None })
   
   ===== ./examples/from_with_positional_param.sql =====
   (Select
@@ -53,21 +42,30 @@ Execute Test Suite:
        { result_kind = None;
          result_columns =
          [(Expression (
-             (ModelField
-                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
-                  field = (<1:12>, <1:14>, "id") }),
-             None))
+             (ModelField { Ast.ModelField.model = User; field = id }), None))
            ]
          };
-       from =
-       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
+       from = (Some (From [(Model User)]));
        where =
        (Some (BinaryExpression (
-                (ModelField
-                   { Ast.ModelField.model = (<1:31>, <1:35>, "User");
-                     field = (<1:36>, <1:38>, "id") }),
-                Eq, (PositionalParam 1))))
+                (ModelField { Ast.ModelField.model = User; field = id }), Eq,
+                (PositionalParam 1))))
        })
+  
+  ===== ./examples/multi_select.sql =====
+  (Select
+     { select =
+       { result_kind = None;
+         result_columns =
+         [(Expression (
+             (ModelField { Ast.ModelField.model = User; field = id }), None));
+           (Expression (
+              (ModelField { Ast.ModelField.model = Post; field = author }),
+              None))
+           ]
+         };
+       from = (Some (From [(Model User); (Model Post); (Table tables)]));
+       where = None })
   
   ===== ./examples/from_with_named_param.sql =====
   (Select
@@ -75,21 +73,44 @@ Execute Test Suite:
        { result_kind = None;
          result_columns =
          [(Expression (
-             (ModelField
-                { Ast.ModelField.model = (<1:7>, <1:11>, "User");
-                  field = (<1:12>, <1:14>, "id") }),
-             None))
+             (ModelField { Ast.ModelField.model = User; field = id }), None))
+           ]
+         };
+       from = (Some (From [(Model User)]));
+       where =
+       (Some (BinaryExpression (
+                (ModelField { Ast.ModelField.model = User; field = id }), Eq,
+                (NamedParam "id"))))
+       })
+  
+  ===== ./examples/simple_join.sql =====
+  (Select
+     { select =
+       { result_kind = None;
+         result_columns =
+         [(Expression (
+             (ModelField { Ast.ModelField.model = User; field = name }), None));
+           (Expression (
+              (ModelField { Ast.ModelField.model = Post; field = content }),
+              None))
            ]
          };
        from =
-       (Some { relation = [(Model (<1:20>, <1:24>, "User"))]; join = None });
-       where =
-       (Some (BinaryExpression (
-                (ModelField
-                   { Ast.ModelField.model = (<1:31>, <1:35>, "User");
-                     field = (<1:36>, <1:38>, "id") }),
-                Eq, (NamedParam "id"))))
-       })
+       (Some (Join
+                { relation = (Model Post);
+                  stanzas =
+                  [(Inner, (Model User),
+                    (On
+                       (BinaryExpression (
+                          (ModelField
+                             { Ast.ModelField.model = User; field = id }),
+                          Eq,
+                          (ModelField
+                             { Ast.ModelField.model = Post; field = author })
+                          ))))
+                    ]
+                  }));
+       where = None })
   
   ===== ./examples/operators.sql =====
   (Select
@@ -109,7 +130,7 @@ Execute Test Suite:
            (Expression ((UnaryExpression (Neg, (NumericLiteral (Integer 1)))),
               None));
            (Expression (
-              (FunctionCall ((<1:29>, <1:33>, "sqrt"),
+              (FunctionCall (sqrt,
                  [(BinaryExpression ((NumericLiteral (Integer 2)), Add,
                      (NumericLiteral (Integer 3))))
                    ]

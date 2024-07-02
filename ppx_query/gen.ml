@@ -1,6 +1,7 @@
 open Ppxlib
 open Oql
 open Base
+module TableOrQuery = Ast.TableOrQuery
 
 let make_positional_param_expr ~loc i =
   let ident = Loc.make ~loc (Lident ("p" ^ Int.to_string i)) in
@@ -8,7 +9,7 @@ let make_positional_param_expr ~loc i =
 ;;
 
 let table_relation ~loc relation =
-  let relation = Ast.get_relation_ident relation in
+  let relation = TableOrQuery.get_name relation in
   let ident = Ldot (Lident relation, "relation") in
   let ident = Loc.make ~loc ident in
   Ast_helper.Exp.ident ~loc ident
@@ -53,12 +54,15 @@ let type_of_expression_to_generated_expression ~loc type_of_expr expr =
   | _ -> expr
 ;;
 
+type state = { params : Analysis.params }
+
 let rec of_ast ~loc (ast : Ast.t) =
   let _ = ast in
   let params = Analysis.find_params ast in
+  let state = { params } in
   match ast with
   | Select select ->
-    let query_expr = to_select_string ~loc select in
+    let query_expr = to_select_string ~loc ~state select in
     let paramlist =
       List.fold_left params.positional ~init:[] ~f:(fun acc pos ->
         Fmt.str "p%d" pos :: acc)
@@ -92,36 +96,74 @@ let rec of_ast ~loc (ast : Ast.t) =
     let f = make_fun ~loc "db" body in
     [%stri let query = [%e f]]
 
-and to_select_string ~loc (select : Ast.select_statement) =
+and of_from_clause ~loc ~state (from : Ast.from_clause) =
+  match from with
+  | From relations ->
+    let tables =
+      List.map relations ~f:(table_relation ~loc)
+      |> Ast_builder.Default.elist ~loc
+    in
+    [%expr String.concat ~sep:", " [%e tables]]
+  | Join join_clause ->
+    (* <table> <join stanzas> *)
+    let relation = table_relation ~loc join_clause.relation in
+    let stanzas =
+      List.map join_clause.stanzas ~f:(of_join_stanza ~loc ~state)
+      |> Ast_builder.Default.elist ~loc
+    in
+    [%expr
+      Stdlib.Format.sprintf
+        "%s %s"
+        [%e relation]
+        (String.concat ~sep:"\n" [%e stanzas])]
+
+and of_join_stanza ~loc ~state (stanza : Ast.join_stanza) =
+  let op, table, join_constraint = stanza in
+  let op =
+    match op with
+    | Inner -> "INNER JOIN"
+    | _ -> failwith "Join stanza op"
+  in
+  let op = Ast_builder.Default.estring ~loc op in
+  let table = table_relation ~loc table in
+  match join_constraint with
+  | On expr ->
+    let on = of_expression ~loc ~state expr in
+    [%expr Stdlib.Format.sprintf "%s %s ON %s" [%e op] [%e table] [%e on]]
+  | Using fields -> failwith "using fields"
+
+and to_select_string ~loc ~state (select : Ast.select_statement) =
   match select.from with
-  | Some { relation = [ relation ]; _ } ->
-    let table = table_relation ~loc relation in
+  | Some relation ->
+    let from_clause = of_from_clause ~loc ~state relation in
     let expressions = Ast.get_select_expressions select.select in
-    let selection = of_expressions ~loc expressions in
+    let select_clause = of_expressions ~loc ~state expressions in
     let e =
       match select.where with
       | Some w ->
-        let where = of_expression ~loc w in
+        let where_clause = of_expression ~loc ~state w in
         [%expr
           Stdlib.Format.sprintf
             "SELECT %s FROM %s WHERE %s"
-            [%e selection]
-            [%e table]
-            [%e where]]
+            [%e select_clause]
+            [%e from_clause]
+            [%e where_clause]]
       | None ->
         [%expr
-          Stdlib.Format.sprintf "SELECT %s FROM %s" [%e selection] [%e table]]
+          Stdlib.Format.sprintf
+            "SELECT %s FROM %s"
+            [%e select_clause]
+            [%e from_clause]]
     in
     e
-  | Some _ -> failwith "unsupported froom clause"
   | None -> failwith "no relations: must be arch user"
 
-and of_expressions ~loc (expressions : Ast.expression list) =
-  let exprs = List.map ~f:(of_expression ~loc) expressions in
+and of_expressions ~loc ~state (expressions : Ast.expression list) =
+  let exprs = List.map ~f:(of_expression ~loc ~state) expressions in
   let exprs = Ast_builder.Default.elist ~loc exprs in
   [%expr Stdlib.String.concat ", " [%e exprs]]
 
-and of_expression ~loc (expression : Ast.expression) =
+and of_expression ~loc ~state (expression : Ast.expression) =
   match expression with
   | Ast.NumericLiteral _ -> failwith "Number"
   | Ast.StringLiteral _ -> failwith "String"
@@ -132,7 +174,7 @@ and of_expression ~loc (expression : Ast.expression) =
   | Ast.Column col -> of_column ~loc col
   | Ast.Index (_, _) -> failwith "Index"
   | Ast.BinaryExpression (left, op, right) ->
-    of_binary_expression ~loc left op right
+    of_binary_expression ~loc ~state left op right
   | Ast.UnaryExpression (_, _) -> failwith "UnaryExpression"
   | Ast.FunctionCall (_, _) -> failwith "FunctionCall"
   | Ast.Null -> failwith "Null"
@@ -141,7 +183,7 @@ and of_expression ~loc (expression : Ast.expression) =
   (*   of_column_reference ~loc (column_ref, field) *)
   | _ -> failwith "unsupported expression"
 
-and of_binary_expression ~loc left op right =
+and of_binary_expression ~loc ~state left op right =
   let open Oql.Ast in
   (* User.id = $id *)
   (* left = User.id, Equal, right = $id *)
@@ -151,9 +193,27 @@ and of_binary_expression ~loc left op right =
   (* [%expr Stdlib.Format.sprintf "(%s %s %s)" [%e left] [%e op] [%e right]] *)
   match left, right with
   (*   let _ = get_param ~loc correlation field in *)
-  | ModelField model_field, NamedParam param -> [%expr "TODO"]
+  | ModelField model_field, NamedParam param ->
+    let left = of_model_field ~loc model_field in
+    let right = of_named_param ~loc ~state param in
+    [%expr Stdlib.Format.sprintf "(%s = %s)" [%e left] [%e right]]
   | ModelField model_field, PositionalParam pos -> [%expr "TODO"]
+  | ModelField left, ModelField right ->
+    let left = of_model_field ~loc left in
+    let right = of_model_field ~loc right in
+    [%expr Stdlib.Format.sprintf "(%s = %s)" [%e left] [%e right]]
   | _ -> failwith "binary expression: not supported"
+
+and of_named_param ~loc ~state (name : string) =
+  let named_position, _ =
+    List.findi_exn state.params.named ~f:(fun _ n -> String.(n = name))
+  in
+  let position = List.length state.params.positional + named_position + 1 in
+  of_position_param ~loc ~state position
+
+and of_position_param ~loc ~state pos =
+  (* make_positional_param_expr ~loc pos *)
+  Ast_builder.Default.estring ~loc ("$" ^ Stdlib.string_of_int pos)
 
 and of_bitop ~loc op =
   match op with

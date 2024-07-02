@@ -1,7 +1,6 @@
-open Parser
-
 type token = Parser.token =
   | WHERE
+  | USING
   | TRUE
   | TABLE_NAME of (string * string)
   | STRING of string
@@ -12,15 +11,19 @@ type token = Parser.token =
   | SELECT
   | SCHEMA_NAME of (string * string * string)
   | RPAR
+  | RIGHT
   | RBRACKET
   | RBRACE
   | POSITIONAL_PARAM of int
   | PLUS
   | PERCENT
+  | OUTER
+  | ON
   | NUMBER of float
   | NULL
   | NOTNULL
   | NE
+  | NATURAL
   | NAMED_PARAM of string
   | NAME of string
   | MODULE of string
@@ -28,16 +31,20 @@ type token = Parser.token =
   | LT
   | LPAR
   | LIKE
+  | LEFT
   | LE
   | LBRACKET
   | LBRACE
+  | JOIN
   | ISNULL
   | IS
   | INTEGER of int
+  | INNER
   | IN
   | ILIKE
   | GT
   | GE
+  | FULL
   | FROM
   | FALSE
   | EQ
@@ -45,6 +52,7 @@ type token = Parser.token =
   | DOUBLE_COLON
   | DOT
   | DISTINCT
+  | CROSS
   | COMMENT
   | COMMA
   | COLON

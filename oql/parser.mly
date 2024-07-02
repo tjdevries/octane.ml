@@ -36,6 +36,10 @@ open Ast
 %token LPAR RPAR LBRACKET RBRACKET LBRACE RBRACE
 %token EOF
 
+(* Joins *)
+%token LEFT RIGHT FULL OUTER INNER CROSS NATURAL JOIN
+%token ON USING
+
 (* https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-PRECEDENCE *)
 %left OR
 %left AND
@@ -62,11 +66,11 @@ let name :=
   | name = NAME; { $startpos, $endpos, name }
 
 let query :=
-  | SELECT; ~ = select; from = option(from); where = option(where); SEMICOLON?; EOF;
+  | SELECT; ~ = select; from = from?; where = where?; SEMICOLON?; EOF;
       { Select { select; from; where } }
 
 let select :=
-  | result_kind = option(result_kind); ~ = result_columns; { { result_kind; result_columns } }
+  | result_kind = result_kind?; ~ = result_columns; { { result_kind; result_columns } }
 
 let result_kind :=
   | DISTINCT; { Distinct }
@@ -80,10 +84,24 @@ let result_column :=
   | expression = expression; { Expression (expression, None) }
 
 let from := 
-  | FROM; relation = separated_list(COMMA, table_or_subquery); { { relation; join = None } }
+  | FROM; relation = separated_nonempty_list(COMMA, table_or_subquery); { From relation }
+  | FROM; relation = table_or_subquery; stanzas = join_stanza+; { Join { relation; stanzas } }
+  (* | FROM;  *)
 
 let where :=
   | WHERE; ~ = expression; { expression }
+
+let join_stanza :=
+  | ~ = join_operator; ~ = table_or_subquery; ~ = join_constraint; { join_operator, table_or_subquery, join_constraint }
+
+let join_operator := 
+  | LEFT; OUTER; JOIN; { LeftOuter }
+  | INNER; JOIN; { Inner }
+  (* ... *)
+
+let join_constraint :=
+  | ON; ~ = expression; { On expression }
+  | USING; LPAR; column_names = separated_list(COMMA, column_name); RPAR; { Using column_names }
 
 let table_or_subquery :=
   | m = MODULE; { Model (Model.make ($startpos, $endpos, m)) }
@@ -107,11 +125,14 @@ let expression :=
   | unop
   | function_call
 
-let field :=
+let column_name :=
   | ~ = name; { 
     let field = Field.make name in
-    Column (Column.make None None field)
+    Column.make None None field
   }
+
+let field :=
+  | ~ = column_name; <Column>
   | m = model; DOT; name = name; {
     ModelField (ModelField.make m name)
   }

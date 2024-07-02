@@ -76,16 +76,17 @@ and select_clause =
   }
 
 and from_clause =
-  { relation : table_or_subquery list
-  ; join : join_clause option
-  }
+  | From of table_or_subquery list
+  | Join of join_clause
 
 and where_clause = expression
 
 and join_clause =
   { relation : table_or_subquery
-  ; stanza : (join_operator * table_or_subquery * join_constraint) list
+  ; stanzas : join_stanza list
   }
+
+and join_stanza = join_operator * table_or_subquery * join_constraint
 
 (* TODO: table-or-subquery *)
 and table_or_subquery =
@@ -106,7 +107,7 @@ and join_operator =
 
 and join_constraint =
   | On of expression
-  | Using of column_name list
+  | Using of Column.t list
 
 and result_kind =
   | Distinct
@@ -172,15 +173,29 @@ and expression =
 
 and t = Select of select_statement [@@deriving show { with_path = false }, eq]
 
-let get_relation_ident (relation : table_or_subquery) =
-  match relation with
-  | Table table -> Table.name table
-  | Model m -> Model.name m
-  | Subquery _ -> failwith "TODO: Subquery"
-;;
-
 let get_select_expressions (select : select_clause) =
   List.filter_map select.result_columns ~f:(function
     | Expression (expr, _) -> Some expr
     | _ -> None)
 ;;
+
+module TableOrQuery = struct
+  let get_name = function
+    | Table table -> Table.name table
+    | Model m -> Model.name m
+    | Subquery _ -> failwith "TODO: Subquery"
+  ;;
+end
+
+module FromClause = struct
+  type t = from_clause [@@deriving show, eq]
+
+  let relations = function
+    | From relations -> relations
+    | Join join ->
+      List.fold_left
+        join.stanzas
+        ~init:[ join.relation ]
+        ~f:(fun acc (_, rel, _) -> rel :: acc)
+  ;;
+end
