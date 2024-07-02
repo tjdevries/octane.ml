@@ -17,7 +17,7 @@ let get_models_from_expression expr =
   let open Ast in
   let rec search expr acc =
     match expr with
-    | ModelField m -> m.model :: acc
+    | ModelField m -> m :: acc
     | NumericLiteral _ -> acc
     | _ -> acc
   in
@@ -33,14 +33,14 @@ let get_used_models ast =
         function
         | Expression (expr, _) -> get_models_from_expression expr @ acc
         | _ -> acc)
-    |> List.dedup_and_sort ~compare:Model.compare
+    |> List.dedup_and_sort ~compare:ModelField.compare
 ;;
 
 let get_invalid_model ast =
   let used_models = get_used_models ast in
   let valid_models = get_valid_models ast in
   List.find used_models ~f:(fun m ->
-    not (List.mem valid_models m ~equal:Ast.Model.equal))
+    not (List.mem valid_models m.model ~equal:Ast.Model.equal))
 ;;
 
 type params =

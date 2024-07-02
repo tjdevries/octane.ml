@@ -22,10 +22,10 @@
 
 
 (executable
-  (name oql_run)
-  (public_name oql_run)
+  (name oql_exec)
+  (public_name oql_exec)
   (package oql)
-  (modules oql_run)
+  (modules oql_exec)
   (libraries oql octane fmt bos silo-postgres dbcaml riot serde base)
   (preprocess (pps serde_derive ppx_query)))
 

@@ -70,20 +70,6 @@ let letter_rule =
       | Ok ast -> ast
       | Error msg -> failwith msg
     in
-    let invalid_model = Oql.Analysis.get_invalid_model ast in
-    let invalid_error =
-      Option.fold
-        invalid_model
-        ~init:(Ast_builder.Default.estring ~loc "hi")
-        ~f:(fun acc invalid_model ->
-          let loc = Oql.Ast.Model.location invalid_model in
-          Ast_builder.Default.pexp_extension ~loc
-          @@ Location.raise_errorf
-               ~loc
-               "Invalid Model: Not selected in query %a"
-               Oql.Ast.Model.pp
-               invalid_model)
-    in
     (* Fmt.epr "@.=====@.query: %s@." query; *)
     (* Fmt.epr "%a@.======@." Oql.Ast.pp ast; *)
     let items =
@@ -119,35 +105,61 @@ let letter_rule =
               | _ -> None)
             expressions
         in
-        let type_decl =
-          Ast_builder.Default.type_declaration
-            ~loc
-            ~name:(Loc.make ~loc "t")
-            ~params:[]
-            ~cstrs:[]
-            ~kind:(Ptype_record fields)
-            ~private_:Public
-            ~manifest:None
+        (* let _ = Ast_builder.Default.ptyp_extension *)
+        let invalid_model = Oql.Analysis.get_invalid_model ast in
+        let items =
+          match invalid_model with
+          | None ->
+            let type_decl =
+              Ast_builder.Default.type_declaration
+                ~loc
+                ~name:(Loc.make ~loc "t")
+                ~params:[]
+                ~cstrs:[]
+                ~kind:(Ptype_record fields)
+                ~private_:Public
+                ~manifest:None
+            in
+            let attributes =
+              Attr.make_deriving_attr ~loc [ "serialize"; "deserialize" ]
+            in
+            let type_decl =
+              { type_decl with ptype_attributes = [ attributes ] }
+            in
+            let type_decl =
+              Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
+            in
+            let query_fn = Gen.of_ast ~loc ast in
+            (* [%p arg1] *)
+            (* let arg1 = Ast_builder.Default.ppat_var ~loc (Loc.make ~loc "db") in *)
+            [ type_decl
+            ; [%stri
+                module Query = struct
+                  type query = t list [@@deriving deserialize, serialize]
+                end]
+            ; [%stri let deserialize = Query.deserialize_query]
+            ; query_fn
+            ]
+          | Some invalid_model ->
+            (* let loc = Oql.Ast.Model.location invalid_model in *)
+            let loc =
+              add_location
+                query_loc
+                (Oql.Ast.ModelField.location invalid_model)
+                2
+            in
+            (* let _ = Ast_builder.Default.plb in *)
+            let ty =
+              Ast_builder.Default.ptyp_extension ~loc
+              @@ Location.error_extensionf
+                   ~loc
+                   "Invalid Model: Module '%a' is not selected in query"
+                   Oql.Ast.Model.pp
+                   invalid_model.model
+            in
+            [ [%stri type t = [%t ty]] ]
         in
-        let attributes =
-          Attr.make_deriving_attr ~loc [ "serialize"; "deserialize" ]
-        in
-        let type_decl = { type_decl with ptype_attributes = [ attributes ] } in
-        let type_decl =
-          Ast_builder.Default.pstr_type ~loc Recursive [ type_decl ]
-        in
-        let query_fn = Gen.of_ast ~loc ast in
-        (* [%p arg1] *)
-        (* let arg1 = Ast_builder.Default.ppat_var ~loc (Loc.make ~loc "db") in *)
-        [ type_decl
-        ; [%stri
-            module Query = struct
-              type query = t list [@@deriving deserialize, serialize]
-            end]
-        ; [%stri let deserialize = Query.deserialize_query]
-        ; query_fn
-        ; [%stri let _ = [%e invalid_error]]
-        ]
+        items
       | _ -> []
     in
     let query = Ast_builder.Default.estring ~loc query in

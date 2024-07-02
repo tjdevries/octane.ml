@@ -10,15 +10,14 @@ let pp_loc fmt (loc : loc) =
 let equal_loc _ _ = true
 let compare_loc _ _ = 0
 
-module Name = struct
-  type t = loc * loc * string [@@deriving show, eq, compare]
-
-  let make (start, finish, s) : t = start, finish, s
-end
-
 module MakeName () = struct
-  type t = Name.t [@@deriving show, eq, compare]
+  type t = loc * loc * string [@@deriving eq, compare]
 
+  (* show functions *)
+  let pp fmt (_, _, s) = Stdlib.Format.fprintf fmt "%s" s
+  let show (_, _, s) = s
+
+  (* Non printing functions *)
   let make s = s
   let start (start, _, _) = start
   let finish (_, finish, _) = finish
@@ -33,23 +32,25 @@ module Schema = MakeName ()
 module Table = MakeName ()
 module FuncName = MakeName ()
 module TypeName = MakeName ()
-
-module Field = struct
-  include MakeName ()
-end
-
 module Model = MakeName ()
+module Field = MakeName ()
 
 module ModelField = struct
   type t =
     { model : Model.t
     ; field : Field.t
     }
-  [@@deriving show, eq]
+  [@@deriving show, eq, compare]
 
   let make model field = { model; field }
   let model_name t = Model.name t.model
   let field_name t = Field.name t.field
+
+  let location t =
+    let start = Model.start t.model in
+    let finish = Field.finish t.field in
+    Ppxlib.Location.{ loc_start = start; loc_end = finish; loc_ghost = false }
+  ;;
 end
 
 module Column = struct

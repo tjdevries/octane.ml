@@ -34,12 +34,11 @@ let example db =
   Ok ()
 ;;
 
-(* TODO: Should be an error *)
 let%query (module GetPost) =
-  "SELECT User.id, Post.author, Post.content FROM Post WHERE Post.id = $id"
+  {| SELECT Post.author, Post.content
+      FROM Post
+      WHERE Post.id = $id |}
 ;;
-
-let _ = "Post.Author.name"
 
 let _ =
   {| SELECT User.name, Post.content
