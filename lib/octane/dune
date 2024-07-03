@@ -1,4 +1,7 @@
+(include_subdirs qualified)
+
 (library
  (name octane)
+ (inline_tests)
  (libraries dbcaml silo-postgres)
- (preprocess (pps ppx_octane)))
+ (preprocess (pps ppx_octane ppx_deriving.std ppx_jane)))

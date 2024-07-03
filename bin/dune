@@ -1,9 +1,9 @@
-(executable
- (public_name octane)
+(executables
  (package octane)
- (name main)
- (modules main)
- (libraries octane caqti caqti-dynload caqti.blocking)
+ (public_names octane tabletest)
+ (names main tabletest)
+ (modules main tabletest)
+ (libraries octane oql base fmt)
  (preprocess (pps ppx_octane)))
 
 (executable

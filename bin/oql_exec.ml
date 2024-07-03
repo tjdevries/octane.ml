@@ -11,6 +11,7 @@ module User = struct
   type t =
     { id : int
     ; name : string
+    ; phone_number : string
     }
   [@@deriving table { name = "users" }]
 end

@@ -195,6 +195,8 @@ Pretty print the file
         let age age = Dbcaml.Params.Number age
         let _ = age
       end
+  
+      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   
@@ -439,6 +441,8 @@ Pretty print the file
         let id id = Dbcaml.Params.Number id
         let _ = id
       end
+  
+      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   
@@ -734,6 +738,8 @@ Pretty print the file
         let name name = Dbcaml.Params.String name
         let _ = name
       end
+  
+      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   
@@ -1007,6 +1013,8 @@ Pretty print the file
         let name name = Dbcaml.Params.String name
         let _ = name
       end
+  
+      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   
@@ -1205,6 +1213,8 @@ Pretty print the file
         let content content = Dbcaml.Params.String content
         let _ = content
       end
+  
+      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
 < language: ocaml

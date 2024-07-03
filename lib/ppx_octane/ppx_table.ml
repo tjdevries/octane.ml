@@ -88,6 +88,8 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   @ [ [%stri let relation = [%e ename]]
     ; [%stri module Fields = [%m field_module]]
     ; [%stri module Params = [%m params_module]]
+    ; [%stri
+        let () = Octane.TableRegistry.register { name = "test"; fields = [] }]
     ]
 ;;
 
