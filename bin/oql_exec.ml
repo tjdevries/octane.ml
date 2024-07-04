@@ -27,7 +27,7 @@ end
 
 let%query (module UserName) = "SELECT User.id, User.name FROM User"
 
-let example db =
+let _example db =
   let* users = UserName.query db in
   List.iter users ~f:(fun { id; name } ->
     Fmt.pr "@.We read this from the database: %d - %s@." id name);
@@ -43,23 +43,23 @@ let%query (module GetPost) =
 
 let get_post_example db =
   let* post = GetPost.query db ~user_id:1 in
-  List.iter post ~f:(fun { name; content } ->
+  List.iter post ~f:(fun { name; content; _ } ->
     Fmt.pr "Post: %s - %s@." name content);
   Ok ()
 ;;
 
 (* generated_query_one db ~id deserialize *)
-let generated_query_one db ~id deserialize =
+let _generated_query_one db ~id deserialize =
   let query = "" in
   Fmt.epr "query: %s@." query;
-  Silo_postgres.query db ~params:[ Number id ] ~query ~deserializer:deserialize
+  Silo.query db ~params:[ Number id ] ~query ~deserializer:deserialize
 ;;
 
 (* generated_query_two db ~id:(Number id) deserialize *)
-let generated_query_two db ~id deserialize =
+let _generated_query_two db ~id deserialize =
   let query = "" in
   Fmt.epr "query: %s@." query;
-  Silo_postgres.query db ~params:[ id ] ~query ~deserializer:deserialize
+  Silo.query db ~params:[ id ] ~query ~deserializer:deserialize
 ;;
 
 let () =
@@ -76,15 +76,15 @@ let () =
   info (fun f -> f "Starting application");
   let* db =
     let config =
-      Silo_postgres.config
+      Silo.config
         ~connections:2
+        ~driver:(module Dbcaml_driver_postgres)
         ~connection_string:
           "postgresql://tjdevries:password@localhosting:5432/oql?sslmode=disable"
     in
-    match Silo_postgres.connect ~config with
+    match Silo.connect ~config with
     | Ok c -> Ok c
-    | Error (`Msg e) -> failwith ("connection:" ^ e)
-    | _ -> failwith "connection: unknown error"
+    | Error e -> failwith ("connection:" ^ e)
   in
   let users =
     match UserName.query db with

@@ -83,9 +83,7 @@ let rec of_ast ~loc (ast : Ast.t) =
         let query = [%e query_expr] in
         let params = [%e params_expr] in
         Fmt.epr "query: %s@." query;
-        let result =
-          Silo_postgres.query db ~query ~params ~deserializer:deserialize
-        in
+        let result = Silo.query db ~query ~params ~deserializer:deserialize in
         Stdlib.Result.map
           (function
             | Some list -> list

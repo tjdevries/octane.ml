@@ -26,7 +26,7 @@
   (public_name oql_exec)
   (package oql)
   (modules oql_exec)
-  (libraries oql octane fmt bos silo-postgres dbcaml riot serde base)
+  (libraries oql octane fmt bos silo dbcaml dbcaml-driver-postgres riot serde base)
   (preprocess (pps serde_derive ppx_octane)))
 
 (executable
