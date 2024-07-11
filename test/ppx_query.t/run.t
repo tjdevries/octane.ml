@@ -324,9 +324,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result =
-        Silo_postgres.query db ~query ~params ~deserializer:deserialize
-      in
+      let result = Silo.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -574,9 +572,7 @@ Pretty print the file
       in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
-      let result =
-        Silo_postgres.query db ~query ~params ~deserializer:deserialize
-      in
+      let result = Silo.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -849,9 +845,7 @@ Pretty print the file
       in
       let params = [ p1; p2 ] in
       Fmt.epr "query: %s@." query;
-      let result =
-        Silo_postgres.query db ~query ~params ~deserializer:deserialize
-      in
+      let result = Silo.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -1370,9 +1364,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result =
-        Silo_postgres.query db ~query ~params ~deserializer:deserialize
-      in
+      let result = Silo.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list

@@ -103,7 +103,9 @@ let%expect_test "finds no operations for empty tables" =
   let prev = { tables = [] } in
   let next = { tables = [] } in
   execute_test ~prev ~next;
-  [%expect {| [] |}]
+  [%expect {|
+    []
+    [] |}]
 ;;
 
 let%expect_test "finds no operations for same tables" =
@@ -124,7 +126,7 @@ let%expect_test "creates table for new tables" =
     [(Table (Create { name = "users"; fields = [Integer('id')] }))] |}];
   List.iter operations ~f:(fun operation ->
     Fmt.pr "%s;@." (Operations.to_sql operation));
-  [%expect {| CREATE TABLE users (TODO:fields); |}]
+  [%expect {| CREATE TABLE users (id INTEGER); |}]
 ;;
 
 (* Fmt.pr "%a" Fmt.list ~sep:Fmt.cr Operations.to_sql *)
