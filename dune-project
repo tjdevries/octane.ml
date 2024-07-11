@@ -19,9 +19,14 @@
  (name octane)
  (synopsis "The fastest, hottest")
  (description "The fastest, hottest")
- (depends ocaml dune)
- (tags
-  (topics "sql" "database" "query builder")))
+ (tags (topics "sql" "database" "query builder"))
+ (depends ocaml dune ppx_deriving fmt bos base oql ppx_octane))
+
+(package
+ (name ppx_octane)
+ (synopsis "PPX for deriving octane tables, queries and more")
+ (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
+ (depends ocaml dune fmt bos base ppxlib oql))
 
 (package
  (name oql)
@@ -67,12 +72,4 @@
    
    
  (tags (topics "oql")))
-
-(package
- (name ppx_octane)
- (synopsis "PPX for deriving octane tables, queries and more")
- (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
- (depends ocaml dune ppxlib oql)
- (tags
-  (topics "to describe" your project)))
 

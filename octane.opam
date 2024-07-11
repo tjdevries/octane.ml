@@ -11,6 +11,12 @@ bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.14"}
+  "ppx_deriving"
+  "fmt"
+  "bos"
+  "base"
+  "oql"
+  "ppx_octane"
   "odoc" {with-doc}
 ]
 build: [

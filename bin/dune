@@ -1,8 +1,8 @@
 (executables
  (package octane)
- (public_names octane tabletest)
- (names main tabletest)
- (modules main tabletest)
+ (public_names octane)
+ (names main)
+ (modules main)
  (libraries octane oql base fmt)
  (preprocess (pps ppx_octane)))
 
@@ -20,7 +20,6 @@
  (modules oql_lex)
  (libraries oql octane fmt bos core))
 
-
 (executable
   (name oql_exec)
   (public_name oql_exec)
@@ -32,7 +31,7 @@
 (executable
   (name pp_query)
   (public_name pp_query)
-  (package oql)
+  (package ppx_octane)
   (modules pp_query)
   (libraries ppxlib ppx_octane)
   (preprocess (pps ppx_octane)))
