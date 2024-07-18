@@ -1,9 +1,9 @@
-[submodule "vendor/dbcaml"]
-	path = vendor/dbcaml
+[submodule "dep/dbcaml"]
+	path = dep/dbcaml
 	url = https://github.com/dbcaml/dbcaml
-[submodule "vendor/riot"]
-	path = vendor/riot
+[submodule "dep/riot"]
+	path = dep/riot
 	url = https://github.com/riot-ml/riot
-[submodule "vendor/serde"]
-	path = vendor/serde
+[submodule "dep/serde"]
+	path = dep/serde
 	url = https://github.com/serde-ml/serde

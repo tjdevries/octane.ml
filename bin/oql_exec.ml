@@ -9,11 +9,21 @@ open Logger.Make (struct
 
 module User = struct
   type t =
-    { id : int
+    { id : int [@primary_key]
     ; name : string
     ; phone_number : string
     }
   [@@deriving table { name = "users" }]
+
+  module Constraints = struct
+    (* This is how you can extend the generated constraints *)
+    (* include Constraints *)
+    (* let table = [
+        PrimaryKey [ Fields.id ];
+        Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));"
+      ] *)
+  
+  end
 end
 
 module Post = struct

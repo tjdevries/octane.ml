@@ -1,0 +1,4 @@
+(library
+  (name ppx_octane_test)
+  (libraries serde dbcaml)
+  (preprocess (pps ppx_octane serde_derive)))

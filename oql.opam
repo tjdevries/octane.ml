@@ -11,8 +11,14 @@ bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.14"}
+<<<<<<< HEAD
   "bos"
   "core"
+||||||| parent of 72655f5 ([WIP]: Thu Jul 18 09:37:45 AM EDT 2024)
+  "menhirlib"
+=======
+  "menhirLib"
+>>>>>>> 72655f5 ([WIP]: Thu Jul 18 09:37:45 AM EDT 2024)
   "fmt"
   "ppx_deriving"
   "ppx_jane"
