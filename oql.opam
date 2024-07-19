@@ -11,8 +11,11 @@ bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.14"}
-  "menhirlib"
+  "menhirLib"
+  "menhir"
   "fmt"
+  "ppx_jane"
+  "ppxlib"
   "ppx_deriving"
   "odoc" {with-doc}
 ]

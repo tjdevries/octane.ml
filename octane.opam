@@ -10,7 +10,13 @@ homepage: "https://github.com/tjdevries/octane.ml"
 bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
   "ocaml"
+  "base"
+  "core"
+  "ppx_jane"
   "dune" {>= "3.14"}
+  "riot"
+  "ppx_octane"
+  "ppx_deriving"
   "odoc" {with-doc}
 ]
 build: [
