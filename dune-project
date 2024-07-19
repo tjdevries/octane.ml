@@ -19,7 +19,15 @@
  (name octane)
  (synopsis "The fastest, hottest")
  (description "The fastest, hottest")
- (depends ocaml dune)
+ (depends 
+   ocaml 
+   base
+   core
+   ppx_jane
+   dune
+   riot
+   ppx_octane
+   ppx_deriving)
  (tags
   (topics "sql" "database" "query builder")))
 
@@ -27,14 +35,31 @@
  (name oql)
  (synopsis "OCaml Query Language")
  (description "OCaml Query Language - very cool")
- (depends ocaml dune menhirlib fmt ppx_deriving)
+ (depends 
+   ocaml 
+   dune 
+   menhirLib 
+   menhir
+   fmt 
+   ppx_jane
+   ppxlib
+   ppx_deriving)
  (tags (topics "oql")))
 
 (package
  (name ppx_octane)
  (synopsis "PPX for deriving octane tables, queries and more")
  (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
- (depends ocaml dune ppxlib oql)
+ (depends
+   ocaml 
+   dune 
+   ppxlib 
+   oql 
+   base 
+   fmt 
+   ppx_deriving 
+   serde_derive 
+   bos)
  (tags
   (topics "to describe" your project)))
 

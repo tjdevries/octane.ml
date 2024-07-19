@@ -1,0 +1,5 @@
+(lang dune 3.14)
+(context
+ (default
+  (paths
+   (vendor ./vendor))))

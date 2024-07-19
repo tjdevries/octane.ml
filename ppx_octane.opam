@@ -14,6 +14,11 @@ depends: [
   "dune" {>= "3.14"}
   "ppxlib"
   "oql"
+  "base"
+  "fmt"
+  "ppx_deriving"
+  "serde_derive"
+  "bos"
   "odoc" {with-doc}
 ]
 build: [
