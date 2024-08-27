@@ -1,6 +1,6 @@
 open Ppxlib
 open Oql
-open Base
+open Core
 module TableOrQuery = Ast.TableOrQuery
 
 let make_positional_param_expr ~loc i =

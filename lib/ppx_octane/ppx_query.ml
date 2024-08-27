@@ -1,4 +1,4 @@
-open Base
+open Core
 open Ppxlib
 
 let extender_rule =

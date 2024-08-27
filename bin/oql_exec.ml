@@ -1,4 +1,4 @@
-open Base
+open Core
 open Riot
 
 let ( let* ) = Stdlib.Result.bind

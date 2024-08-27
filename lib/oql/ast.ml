@@ -1,4 +1,4 @@
-open Base
+open Core
 
 type loc = Lexing.position
 

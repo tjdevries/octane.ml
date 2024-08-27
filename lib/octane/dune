@@ -3,5 +3,5 @@
 (library
  (name octane)
  (inline_tests)
- (libraries dbcaml silo)
+ (libraries dbcaml silo core)
  (preprocess (pps ppx_octane ppx_deriving.std ppx_jane)))

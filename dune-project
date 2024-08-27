@@ -27,7 +27,45 @@
  (name oql)
  (synopsis "OCaml Query Language")
  (description "OCaml Query Language - very cool")
- (depends ocaml dune menhirlib fmt ppx_deriving)
+ (depends
+   ocaml dune
+   bos core fmt ppx_deriving ppx_jane
+
+   (ppx_inline_tet :with-test)
+   (ppx_expect :with-test)
+
+   ;; Vendored package deps
+   (rio (>= "0.0.8"))
+   (spices :with-test)
+   (qcheck :with-test)
+
+   (bytestring (>= "0.0.1"))
+   castore
+   (config (>= "0.0.1"))
+   (gluon (>= "0.0.1"))
+   (mdx (and :with-test (>= "2.3.1")))
+   (mirage-crypto (>= "0.11.2"))
+   (mirage-crypto-rng (>= "0.11.2"))
+   (mtime (>= "2.0.0"))
+   (ocaml (>= "5.1"))
+   (odoc (and :with-doc (>= "2.2.2")))
+   (ptime (>= "1.1.0"))
+   (randomconv (= "0.2.0"))
+   (rio (>= "0.0.1"))
+   (telemetry (>= "0.0.1"))
+   (tls (= "0.17.3"))
+   (uri (>= "4.4.0"))
+   (x509 (and :with-test (>= "0.16.5")))
+
+   uri
+   (alcotest :with-test)
+   cryptokit
+
+   ;; Actual Deps
+   menhir) 
+
+   
+   
  (tags (topics "oql")))
 
 (package

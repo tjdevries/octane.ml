@@ -1,4 +1,4 @@
-open Base
+open Core
 
 let get_valid_models ast =
   let open Ast in
