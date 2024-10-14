@@ -1,0 +1,17 @@
+(version 0.0.8)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends cstruct ocaml dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/riot-ml/riot/releases/download/0.0.8/riot-0.0.8.tbz)
+  (checksum
+   sha256=4ac883cf9ddbf5b3084fd4372300dd07758acbdf1649df5f8a2794e35a99a5e1)))

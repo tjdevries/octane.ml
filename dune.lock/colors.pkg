@@ -1,0 +1,17 @@
+(version 0.0.1)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends dune ocaml)
+
+(source
+ (fetch
+  (url
+   https://github.com/leostera/colors/releases/download/0.0.1/colors-0.0.1.tbz)
+  (checksum
+   sha256=7d8d63f4538356789fc2c23caa42a6d104a6b2c816a9815727bcbca3bfca9846)))

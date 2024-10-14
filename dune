@@ -1,2 +1,0 @@
-;; Don't actually run the tests and what not in the vendored directories.
-(vendored_dirs dep)

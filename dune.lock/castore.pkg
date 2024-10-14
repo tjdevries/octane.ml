@@ -1,0 +1,17 @@
+(version 0.0.2)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends ocaml dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/leostera/castore/releases/download/0.0.2/castore-0.0.2.tbz)
+  (checksum
+   sha256=8d1d399085f733b6b822a8bc059bae6d72459377cbfce4d1a6c8bb1001258b3e)))

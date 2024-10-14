@@ -1,0 +1,30 @@
+(version 2.4.1)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends
+ dune
+ ocaml
+ ocamlfind
+ fmt
+ cppo
+ csexp
+ astring
+ logs
+ cmdliner
+ re
+ ocaml-version
+ camlp-streams
+ result)
+
+(source
+ (fetch
+  (url
+   https://github.com/realworldocaml/mdx/releases/download/2.4.1/mdx-2.4.1.tbz)
+  (checksum
+   sha256=1a40cc91cc553ded0a20c98d434354953bdb759ecc91ad36bbb9a7dd0412af13)))

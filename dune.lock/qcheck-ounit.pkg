@@ -1,0 +1,11 @@
+(version 0.22)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends dune base-unix qcheck-core ounit2 ocaml)
+
+(source
+ (fetch
+  (url https://github.com/c-cube/qcheck/archive/v0.22.tar.gz)
+  (checksum md5=f05bdc3a15da4c65e9e4a87f845bc1ef)))

@@ -1,0 +1,17 @@
+(version 0.0.1)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends mirage-crypto mirage-crypto-rng ocaml randomconv dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/leostera/random/releases/download/0.0.1/random-0.0.1.tbz)
+  (checksum
+   sha256=c8373956a728671d22ab4b7674574d6eb6cc67e2f8843a519d65b6fa37dcbdbb)))

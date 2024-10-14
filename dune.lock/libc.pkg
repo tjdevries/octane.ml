@@ -1,0 +1,17 @@
+(version 0.0.1)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends config ocaml dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-sys/libc.ml/releases/download/0.0.1/libc-0.0.1.tbz)
+  (checksum
+   sha256=7b9c7961a7bb57aa8ea6af9a2d9695fba2fd95dcbda83a9df4a73c9e402c10d8)))

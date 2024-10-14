@@ -1,0 +1,14 @@
+(version 3)
+
+(build
+ (run sh -exc "cc -c $CFLAGS -I/usr/local/include test.c"))
+
+(depends conf-gmp)
+
+(extra_sources
+ (test.c
+  (fetch
+   (url
+    https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/conf-gmp-powm-sec/test.c.3)
+   (checksum
+    sha256=388b3879530257a7e6e59b68208ee2a52de7be30e40eb4d3a54419708fdad490))))

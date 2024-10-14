@@ -1,0 +1,17 @@
+(version 0.0.3)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends ppxlib spices dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml-sys/config.ml/releases/download/0.0.3/config-0.0.3.tbz)
+  (checksum
+   sha256=6dc4427cb5f6ae8f2f9d04c9897d9a606242f9e0f6eaf90fca731883cd7b6053)))

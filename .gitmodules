@@ -1,9 +1,0 @@
-[submodule "dep/dbcaml"]
-	path = dep/dbcaml
-	url = https://github.com/dbcaml/dbcaml
-[submodule "dep/riot"]
-	path = dep/riot
-	url = https://github.com/riot-ml/riot
-[submodule "dep/serde"]
-	path = dep/serde
-	url = https://github.com/serde-ml/serde

@@ -1,0 +1,16 @@
+(version 1.20)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends ocaml dune dune-configurator zarith conf-zlib conf-gmp-powm-sec)
+
+(source
+ (fetch
+  (url https://github.com/xavierleroy/cryptokit/archive/release1201.tar.gz)
+  (checksum
+   sha256=b933c32b4e03e7236add969c2f583df241aeff8eabd2cabb1f345a78250fcea6)))

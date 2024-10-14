@@ -1,0 +1,17 @@
+(version 0.0.1)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs} @install)))
+
+(depends ocaml dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/leostera/telemetry/releases/download/0.0.1/telemetry-0.0.1.tbz)
+  (checksum
+   sha256=6047fbcc2fc5db3241b5035fc89d8ece72a6a05a3532cf4ed96822385921a76f)))
