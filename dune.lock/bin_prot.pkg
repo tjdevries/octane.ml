@@ -1,0 +1,23 @@
+(version v0.17.0)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends
+ ocaml
+ base
+ ppx_compare
+ ppx_custom_printf
+ ppx_fields_conv
+ ppx_optcomp
+ ppx_sexp_conv
+ ppx_stable_witness
+ ppx_variants_conv
+ dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/bin_prot/archive/refs/tags/v0.17.0.tar.gz)
+  (checksum
+   sha256=0e6c61aff150d19a0f89cb3e354ab36189e4bc23e28ab8bce03b6c6b6004f237)))

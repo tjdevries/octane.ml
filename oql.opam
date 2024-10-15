@@ -9,7 +9,7 @@ tags: ["topics" "oql"]
 homepage: "https://github.com/tjdevries/octane.ml"
 bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
-  "ocaml"
+  "ocaml" {>= "5.0"}
   "dune" {>= "3.14"}
 <<<<<<< HEAD
   "bos"

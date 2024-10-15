@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml dune riot uri)
+
+(source
+ (fetch
+  (url git+https://github.com/dbcaml/dbcaml.git)))
+
+(dev)

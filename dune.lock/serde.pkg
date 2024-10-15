@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml rio dune)
+
+(source
+ (fetch
+  (url git+https://github.com/serde-ml/serde.git)))
+
+(dev)

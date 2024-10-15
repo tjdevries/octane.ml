@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml dune serde serde_derive)
+
+(source
+ (fetch
+  (url git+https://github.com/dbcaml/dbcaml.git)))
+
+(dev)

@@ -1,0 +1,13 @@
+(version 1.2.0)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends ocaml dune eqaf)
+
+(source
+ (fetch
+  (url
+   https://github.com/mirage/digestif/releases/download/v1.2.0/digestif-1.2.0.tbz)
+  (checksum
+   sha256=c30168cafe279a665367806b3e5e6398fd7474f1e5260e76826d5ec9d3b2a508)))

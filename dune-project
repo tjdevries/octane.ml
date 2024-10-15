@@ -15,23 +15,55 @@
 
 ; (documentation https://url/to/documentation)
 
-(package
- (name octane)
- (synopsis "The fastest, hottest")
- (description "The fastest, hottest")
- (tags (topics "sql" "database" "query builder"))
- (depends ocaml dune ppx_deriving fmt bos base oql ppx_octane))
+;; Until published, we can pin directly.
+(pin
+ (url "git+https://github.com/dbcaml/dbcaml.git")
+ (package (name dbcaml)))
 
-(package
- (name ppx_octane)
- (synopsis "PPX for deriving octane tables, queries and more")
- (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
- (depends ocaml dune fmt bos base ppxlib oql))
+(pin
+ (url "git+https://github.com/dbcaml/dbcaml.git")
+ (package (name dbcaml-driver-postgres)))
+
+(pin
+ (url "git+https://github.com/dbcaml/dbcaml.git")
+ (package (name serde-postgres)))
+
+(pin
+ (url "git+https://github.com/riot-ml/riot.git")
+ (package (name riot)))
 
 (package
  (name oql)
  (synopsis "OCaml Query Language")
  (description "OCaml Query Language - very cool")
- (depends ocaml dune menhirLib fmt ppx_deriving)
+ (depends 
+   ;; OCaml deps
+   (ocaml (>= 5.0)) dune 
+   ;; Parsing deps
+   menhirLib
+   dbcaml
+   (mirage-crypto-rng (>= "1"))
+   fmt ppx_deriving ppx_jane)
  (tags (topics "oql")))
+
+(package
+ (name octane)
+ (synopsis "The fastest, hottest")
+ (description "The fastest, hottest")
+ (tags (topics "sql" "database" "query builder"))
+ (depends
+   (ocaml (>= 5.0)) dune 
+   fmt bos base ppx_deriving
+   ;; Riot suite
+   dbcaml dbcaml-driver-postgres riot serde serde_derive serde-postgres
+   ;; Local projects
+   oql ppx_octane))
+
+(package
+ (name ppx_octane)
+ (synopsis "PPX for deriving octane tables, queries and more")
+ (description "PPX for deriving octane tables, queries and more. Includes %query, %table")
+ (depends
+   (ocaml (>= 5.0)) dune 
+   ppxlib fmt bos base oql))
 

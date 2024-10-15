@@ -1,0 +1,23 @@
+(version dev)
+
+(dune)
+
+(depends
+ bytestring
+ config
+ gluon
+ mirage-crypto
+ mirage-crypto-rng
+ mtime
+ ocaml
+ ptime
+ rio
+ telemetry
+ uri
+ dune)
+
+(source
+ (fetch
+  (url git+https://github.com/riot-ml/riot.git)))
+
+(dev)

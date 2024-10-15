@@ -9,12 +9,12 @@ tags: ["topics" "sql" "database" "query builder"]
 homepage: "https://github.com/tjdevries/octane.ml"
 bug-reports: "https://github.com/tjdevries/octane.ml/issues"
 depends: [
-  "ocaml"
+  "ocaml" {>= "5.0"}
   "dune" {>= "3.14"}
-  "ppx_deriving"
   "fmt"
   "bos"
   "base"
+  "ppx_deriving"
   "oql"
   "ppx_octane"
   "odoc" {with-doc}
