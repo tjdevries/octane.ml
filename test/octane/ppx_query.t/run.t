@@ -64,21 +64,9 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
-            let* age =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"age\" (\"age\")")
-                !age
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
+            let* age = Stdlib.Option.to_result ~none:(`Msg "missing field \"age\" (\"age\")") !age in
             Ok { age; name; id })
       ;;
   
@@ -265,16 +253,8 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             Ok { name; id })
       ;;
   
@@ -317,9 +297,7 @@ Pretty print the file
           "SELECT %s FROM %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"
-             ; Stdlib.Format.sprintf "%s.%s" User.relation "name"
-             ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"; Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
           (String.concat ~sep:", " [ User.relation ])
       in
       let params = [] in
@@ -380,11 +358,7 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
             Ok { id })
       ;;
   
@@ -509,16 +483,8 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             Ok { name; id })
       ;;
   
@@ -561,14 +527,9 @@ Pretty print the file
           "SELECT %s FROM %s WHERE %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"
-             ; Stdlib.Format.sprintf "%s.%s" User.relation "name"
-             ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"; Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
           (String.concat ~sep:", " [ User.relation ])
-          (Stdlib.Format.sprintf
-             "(%s = %s)"
-             (Stdlib.Format.sprintf "%s.%s" User.relation "id")
-             "$1")
+          (Stdlib.Format.sprintf "(%s = %s)" (Stdlib.Format.sprintf "%s.%s" User.relation "id") "$1")
       in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
@@ -639,16 +600,8 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             Ok { name; id })
       ;;
   
@@ -792,11 +745,7 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             Ok { name })
       ;;
   
@@ -837,9 +786,7 @@ Pretty print the file
       let query =
         Stdlib.Format.sprintf
           "SELECT %s FROM %s WHERE %s"
-          (Stdlib.String.concat
-             ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; p2 ])
+          (Stdlib.String.concat ", " [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; p2 ])
           (String.concat ~sep:", " [ User.relation ])
           "TODO"
       in
@@ -912,16 +859,8 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             Ok { name; id })
       ;;
   
@@ -1074,21 +1013,9 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* id =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"id\" (\"id\")")
-                !id
-            in
-            let* author =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"author\" (\"author\")")
-                !author
-            in
-            let* content =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"content\" (\"content\")")
-                !content
-            in
+            let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
+            let* author = Stdlib.Option.to_result ~none:(`Msg "missing field \"author\" (\"author\")") !author in
+            let* content = Stdlib.Option.to_result ~none:(`Msg "missing field \"content\" (\"content\")") !content in
             Ok { content; author; id })
       ;;
   
@@ -1101,9 +1028,7 @@ Pretty print the file
         fun t ctx ->
           record ctx "t" 3 (fun ctx ->
             let* () = field ctx "id" (int t.id) in
-            let* () =
-              field ctx "author" ((s User.Fields.serialize_id) t.author)
-            in
+            let* () = field ctx "author" ((s User.Fields.serialize_id) t.author) in
             let* () = field ctx "content" (string t.content) in
             Ok ())
       ;;
@@ -1215,8 +1140,7 @@ Pretty print the file
 
   $ pp_query ./lib/invalid_model.ml | ocamlformat --impl -
   module ShouldError = struct
-    type t =
-      [%ocaml.error "Invalid Model: Module 'Post' is not selected in query"]
+    type t = [%ocaml.error "Invalid Model: Module 'Post' is not selected in query"]
   
     let raw = "SELECT Post.id from User"
   end [@warning "-32"]
@@ -1240,9 +1164,7 @@ Pretty print the file
         fun t ctx ->
           record ctx "t" 2 (fun ctx ->
             let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
-            let* () =
-              field ctx "content" ((s Post.Fields.serialize_content) t.content)
-            in
+            let* () = field ctx "content" ((s Post.Fields.serialize_content) t.content) in
             Ok ())
       ;;
   
@@ -1277,9 +1199,7 @@ Pretty print the file
               let* tag = next_field ctx field_visitor in
               match tag with
               | Some `content ->
-                let* v =
-                  field ctx "content" (d Post.Fields.deserialize_content)
-                in
+                let* v = field ctx "content" (d Post.Fields.deserialize_content) in
                 content := Some v;
                 read_fields ()
               | Some `name ->
@@ -1292,16 +1212,8 @@ Pretty print the file
               | None -> Ok ()
             in
             let* () = read_fields () in
-            let* name =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"name\" (\"name\")")
-                !name
-            in
-            let* content =
-              Stdlib.Option.to_result
-                ~none:(`Msg "missing field \"content\" (\"content\")")
-                !content
-            in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
+            let* content = Stdlib.Option.to_result ~none:(`Msg "missing field \"content\" (\"content\")") !content in
             Ok { content; name })
       ;;
   
@@ -1344,9 +1256,7 @@ Pretty print the file
           "SELECT %s FROM %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "name"
-             ; Stdlib.Format.sprintf "%s.%s" Post.relation "content"
-             ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; Stdlib.Format.sprintf "%s.%s" Post.relation "content" ])
           (Stdlib.Format.sprintf
              "%s %s"
              Post.relation
@@ -1372,10 +1282,7 @@ Pretty print the file
         result
     ;;
   
-    let raw =
-      " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = \
-       Post.author "
-    ;;
+    let raw = " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = Post.author "
   end [@warning "-32"]
 < language: ocaml
 

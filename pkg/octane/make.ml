@@ -1,6 +1,5 @@
 open Core
 open Schema
-open State
 
 type operations = Operations.t list [@@deriving show { with_path = false }]
 

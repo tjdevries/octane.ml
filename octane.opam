@@ -13,8 +13,16 @@ depends: [
   "dune" {>= "3.14"}
   "fmt"
   "bos"
-  "base"
+  "core"
   "ppx_deriving"
+  "ppx_expect"
+  "dbcaml"
+  "dbcaml-driver-postgres"
+  "riot"
+  "serde"
+  "serde_derive"
+  "serde-postgres"
+  "silo"
   "oql"
   "ppx_octane"
   "odoc" {with-doc}

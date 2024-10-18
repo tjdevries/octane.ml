@@ -1,0 +1,31 @@
+(version 1.0.2)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs})))
+
+(depends
+ ocaml
+ dune
+ mirage-crypto
+ mirage-crypto-ec
+ mirage-crypto-pk
+ mirage-crypto-rng
+ x509
+ domain-name
+ fmt
+ kdf
+ logs
+ ipaddr
+ ohex
+ digestif)
+
+(source
+ (fetch
+  (url
+   https://github.com/mirleft/ocaml-tls/releases/download/v1.0.2/tls-1.0.2.tbz)
+  (checksum
+   sha256=a21751200cb3146ffe1547f5d6de187b5147e8ee6bed12b09d52c002d42b3feb)))

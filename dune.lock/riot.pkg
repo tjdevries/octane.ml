@@ -13,6 +13,7 @@
  ptime
  rio
  telemetry
+ tls
  uri
  dune)
 

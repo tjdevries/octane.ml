@@ -2,7 +2,17 @@
 
 (dune)
 
-(depends ocaml dune riot bytestring cryptokit castore uri)
+(depends
+ ocaml
+ dune
+ riot
+ bytestring
+ cryptokit
+ castore
+ tls
+ uri
+ dbcaml
+ serde-postgres)
 
 (source
  (fetch

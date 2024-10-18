@@ -1,0 +1,17 @@
+(version 0.4.0)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs})))
+
+(depends ocaml dune)
+
+(source
+ (fetch
+  (url
+   https://github.com/hannesm/domain-name/releases/download/v0.4.0/domain-name-0.4.0.tbz)
+  (checksum
+   sha256=a5c06e22845895201973e812fe3019274d1db81c0a7873da6c8007c4ad2108c5)))

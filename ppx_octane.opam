@@ -14,7 +14,7 @@ depends: [
   "ppxlib"
   "fmt"
   "bos"
-  "base"
+  "core"
   "oql"
   "odoc" {with-doc}
 ]

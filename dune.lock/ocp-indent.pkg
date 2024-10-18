@@ -1,0 +1,11 @@
+(version 1.8.1)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends ocaml dune cmdliner ocamlfind base-bytes)
+
+(source
+ (fetch
+  (url https://github.com/OCamlPro/ocp-indent/archive/1.8.1.tar.gz)
+  (checksum md5=70db6649a8c08a682ad63730c9752e31)))

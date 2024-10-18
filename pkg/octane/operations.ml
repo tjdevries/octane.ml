@@ -1,6 +1,5 @@
-open Base
+open Core
 open Schema
-open State
 
 type t =
   | CreateTable of table_name

@@ -1,0 +1,22 @@
+(version v0.17.0)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends
+ ocaml
+ base
+ gel
+ ppx_compare
+ ppx_enumerate
+ ppx_jane
+ ppxlib_jane
+ dune
+ ppxlib)
+
+(source
+ (fetch
+  (url
+   https://github.com/janestreet/ppx_diff/archive/refs/tags/v0.17.0.tar.gz)
+  (checksum
+   sha256=5e817094edf127d384110227ecfdc3e23f0f130266d48d1f326a03f6f58a2609)))

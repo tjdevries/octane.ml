@@ -3,7 +3,8 @@
  (public_name oql)
  (libraries menhirLib fmt dbcaml ppxlib core)
  (inline_tests)
- (preprocess (pps ppx_deriving.std ppx_jane)))
+ (preprocess
+  (pps ppx_deriving.std ppx_jane)))
 
 (ocamllex lexer)
 
@@ -11,5 +12,3 @@
  (modules parser)
  (flags --table)
  (explain true))
-
-

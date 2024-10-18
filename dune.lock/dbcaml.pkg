@@ -2,7 +2,7 @@
 
 (dune)
 
-(depends ocaml dune riot uri)
+(depends ocaml dune riot serde uri)
 
 (source
  (fetch

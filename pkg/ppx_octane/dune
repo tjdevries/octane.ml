@@ -8,8 +8,8 @@
  (name ppx_octane)
  (kind ppx_deriver)
  (package ppx_octane)
- (flags (:standard -w -27))
- (libraries ppxlib base fmt ppx_deriving.api oql serde_derive bos)
+ (flags
+  (:standard -w -27))
+ (libraries ppxlib core fmt ppx_deriving.api oql serde_derive bos)
  (preprocess
   (pps ppxlib.metaquot)))
-

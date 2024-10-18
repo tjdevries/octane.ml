@@ -1,0 +1,17 @@
+(version 5.2.1-502)
+
+(build
+ (progn
+  (when
+   %{pkg-self:dev}
+   (run dune subst))
+  (run dune build -p %{pkg-self:name} -j %{jobs})))
+
+(depends ocaml dune csexp)
+
+(source
+ (fetch
+  (url
+   https://github.com/ocaml/merlin/releases/download/v5.2.1-502/merlin-5.2.1-502.tbz)
+  (checksum
+   sha256=5c02dc71b2d31b619851c14a965b91c650a4dbcd49bf56004eee61e0c58d584c)))

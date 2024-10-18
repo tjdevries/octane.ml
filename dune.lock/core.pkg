@@ -1,0 +1,35 @@
+(version v0.17.1)
+
+(build
+ (run dune build -p %{pkg-self:name} -j %{jobs}))
+
+(depends
+ ocaml
+ base
+ base_bigstring
+ base_quickcheck
+ bin_prot
+ fieldslib
+ jane-street-headers
+ jst-config
+ ppx_assert
+ ppx_base
+ ppx_diff
+ ppx_hash
+ ppx_inline_test
+ ppx_jane
+ ppx_optcomp
+ ppx_sexp_conv
+ ppx_sexp_message
+ sexplib
+ splittable_random
+ stdio
+ time_now
+ typerep
+ variantslib
+ dune)
+
+(source
+ (fetch
+  (url https://github.com/janestreet/core/archive/refs/tags/v0.17.1.tar.gz)
+  (checksum md5=743a141234e04210e295980f7a78a6d9)))
