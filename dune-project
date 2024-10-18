@@ -1,19 +1,12 @@
 (lang dune 3.14)
-
-(name octane)
-(generate_opam_files true)
-
 (using menhir 3.0)
 
-(source
- (github tjdevries/octane.ml))
-
+(name octane)
+(source (github tjdevries/octane.ml))
 (license MIT)
-
 (authors "TJ DeVries")
 (maintainers "TJ DeVries")
-
-; (documentation https://url/to/documentation)
+(generate_opam_files true)
 
 ;; Until published, we can pin directly.
 (pin
