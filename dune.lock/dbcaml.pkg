@@ -6,6 +6,6 @@
 
 (source
  (fetch
-  (url git+https://github.com/dbcaml/dbcaml.git)))
+  (url file:///home/tjdevries/git/dbcaml/)))
 
 (dev)

@@ -21,6 +21,7 @@ depends: [
   "serde"
   "serde_derive"
   "serde-postgres"
+  "SerdeSqlite"
   "mirage-crypto-rng" {>= "1"}
   "fmt"
   "core"

@@ -1,11 +1,11 @@
-; (executables
-;  (package octane)
-;  (public_names octane)
-;  (names main)
-;  (modules main)
-;  (libraries octane oql core fmt)
-;  (preprocess
-;   (pps ppx_octane)))
+(executable
+ (package octane-testerino)
+ (public_name octane_testerino)
+ (name main)
+ (modules main)
+ (libraries octane oql fmt dbcaml silo dbcaml-driver-postgres riot serde core)
+ (preprocess
+  (pps ppx_octane)))
 
 (executable
  (public_name oql_parse)
@@ -21,24 +21,25 @@
  (modules oql_lex)
  (libraries oql octane fmt bos core))
 
-; (executable
-;  (name oql_exec)
-;  (public_name oql_exec)
-;  (package oql)
-;  (modules oql_exec)
-;  (libraries
-;   oql
-;   octane
-;   fmt
-;   bos
-;   silo
-;   dbcaml
-;   dbcaml-driver-postgres
-;   riot
-;   serde
-;   core)
-;  (preprocess
-;   (pps serde_derive ppx_octane)))
+(executable
+ (name oql_exec)
+ (public_name oql_exec)
+ (package oql)
+ (modules oql_exec)
+ (libraries
+  oql
+  octane
+  fmt
+  bos
+  silo
+  dbcaml
+  dbcaml-driver-postgres
+  riot
+  serde
+  SerdeSqlite
+  core)
+ (preprocess
+  (pps serde_derive ppx_octane)))
 
 (executable
  (name pp_query)

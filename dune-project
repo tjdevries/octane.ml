@@ -9,21 +9,15 @@
 (generate_opam_files true)
 
 ;; Until published, we can pin directly.
-(pin
- (url "git+https://github.com/dbcaml/dbcaml.git")
- (package (name dbcaml)))
-
-(pin
- (url "git+https://github.com/dbcaml/dbcaml.git")
- (package (name dbcaml-driver-postgres)))
-
-(pin
- (url "git+https://github.com/dbcaml/dbcaml.git")
- (package (name silo)))
-
-(pin
- (url "git+https://github.com/dbcaml/dbcaml.git")
- (package (name serde-postgres)))
+; (pin (url "git+https://github.com/dbcaml/dbcaml.git") (package (name dbcaml)))
+; (pin (url "git+https://github.com/dbcaml/dbcaml.git") (package (name dbcaml-driver-postgres)))
+; (pin (url "git+https://github.com/dbcaml/dbcaml.git") (package (name silo)))
+; (pin (url "git+https://github.com/dbcaml/dbcaml.git") (package (name serde-postgres)))
+(pin (url "file:///home/tjdevries/git/dbcaml/") (package (name dbcaml)))
+(pin (url "file:///home/tjdevries/git/dbcaml/") (package (name dbcaml-driver-postgres)))
+(pin (url "file:///home/tjdevries/git/dbcaml/") (package (name silo)))
+(pin (url "file:///home/tjdevries/git/dbcaml/") (package (name serde-postgres)))
+(pin (url "file:///home/tjdevries/git/dbcaml/") (package (name SerdeSqlite)))
 
 (pin
  (url "git+https://github.com/serde-ml/serde.git")
@@ -37,8 +31,12 @@
  (url "git+https://github.com/serde-ml/serde.git")
  (package (name serde_derive)))
 
+; (pin
+;  (url "git+https://github.com/riot-ml/riot.git")
+;  (package (name riot)))
+
 (pin
- (url "git+https://github.com/riot-ml/riot.git")
+ (url "file:///home/tjdevries/git/riot/")
  (package (name riot)))
 
 (package
@@ -51,7 +49,7 @@
    ;; Parsing deps
    menhir menhirLib
    dbcaml dbcaml-driver-postgres silo bos
-   serde serde_derive serde-postgres
+   serde serde_derive serde-postgres SerdeSqlite
    (mirage-crypto-rng (>= "1"))
    fmt core ppx_deriving ppx_jane)
  (tags (topics "oql")))
@@ -76,4 +74,11 @@
  (depends
    (ocaml (>= 5.0)) dune 
    ppxlib fmt bos core oql))
+
+(package
+ (name octane-testerino)
+ (synopsis "test examples for octane")
+ (depends
+   (ocaml (>= 5.0)) dune 
+   ppxlib fmt bos core oql octane ppx_octane))
 

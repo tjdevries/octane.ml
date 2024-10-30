@@ -73,7 +73,7 @@ let _generated_query_two db ~id deserialize =
 ;;
 
 let () =
-  Riot.run_with_status ~workers:2 ~on_error:(fun x -> failwith x)
+  Riot.run_with_status ~on_error:(fun x -> failwith x)
   @@ fun () ->
   let _ =
     match Logger.start () with
@@ -82,19 +82,28 @@ let () =
     | Error (`Application_error msg) -> failwith msg
     | Ok pid -> pid
   in
+  set_log_level (Some Logger.Trace);
   (* set_log_level (Some Logger.Trace); *)
   info (fun f -> f "Starting application");
   let* db =
     let config =
       Silo.config
         ~connections:2
-        ~driver:(module Dbcaml_driver_postgres)
+        ~driver:(module SerdeSqlite.Driver)
         ~connection_string:
-          "postgresql://tjdevries:password@localhosting:5432/oql?sslmode=disable"
+          "postgresql://tjdevries:password@omen:5432/oql?sslmode=disable"
     in
     match Silo.connect ~config with
     | Ok c -> Ok c
     | Error e -> failwith ("connection:" ^ e)
+  in
+  info (fun f -> f "Finished connecting");
+  let _ =
+    Silo.query
+      db
+      ~params:[]
+      ~query:"SELECT * from users"
+      ~deserializer:UserName.deserialize
   in
   let users =
     match UserName.query db with

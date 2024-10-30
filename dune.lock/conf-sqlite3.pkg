@@ -1,0 +1,8 @@
+(version 1)
+
+(build
+ (run pkg-config sqlite3))
+
+(depends conf-pkg-config)
+
+(depexts libsqlite3-dev)

@@ -19,6 +19,6 @@
 
 (source
  (fetch
-  (url git+https://github.com/riot-ml/riot.git)))
+  (url file:///home/tjdevries/git/riot/)))
 
 (dev)
