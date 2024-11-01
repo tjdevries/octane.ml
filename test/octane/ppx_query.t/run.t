@@ -359,12 +359,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
-      Stdlib.Result.map
-        (function
-          | Some list -> list
-          | None -> [])
-        result
+      DBCaml.query db ~query ~params ~deserializer:deserialize
     ;;
   
     let raw = "select User.id, User.name from User"
@@ -640,12 +635,7 @@ Pretty print the file
       in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
-      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
-      Stdlib.Result.map
-        (function
-          | Some list -> list
-          | None -> [])
-        result
+      DBCaml.query db ~query ~params ~deserializer:deserialize
     ;;
   
     let raw = "SELECT User.id, User.name FROM User WHERE User.id = $id"
@@ -949,12 +939,7 @@ Pretty print the file
       in
       let params = [ p1; p2 ] in
       Fmt.epr "query: %s@." query;
-      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
-      Stdlib.Result.map
-        (function
-          | Some list -> list
-          | None -> [])
-        result
+      DBCaml.query db ~query ~params ~deserializer:deserialize
     ;;
   
     let raw = "SELECT User.name, $2 FROM User WHERE User.id = $1"
@@ -1535,12 +1520,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
-      Stdlib.Result.map
-        (function
-          | Some list -> list
-          | None -> [])
-        result
+      DBCaml.query db ~query ~params ~deserializer:deserialize
     ;;
   
     let raw = " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = Post.author "
