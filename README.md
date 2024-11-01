@@ -32,3 +32,9 @@ let print_users db =
 ```
 
 There's more things too, but I haven't written those parts yet.
+
+
+# TODOs:
+- Table & SQL syntax generation needs to be provided by "Driver" for different SQL dialects.
+    - We have different stuff for SQlite vs Postgres
+

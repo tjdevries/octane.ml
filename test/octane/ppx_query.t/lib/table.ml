@@ -1,6 +1,6 @@
 module User = struct
   type t =
-    { id : int
+    { id : int [@primary_key { autoincrement = true }]
     ; name : string
     ; age : int
     }

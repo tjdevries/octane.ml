@@ -1,8 +1,0 @@
-(version 1)
-
-(build
- (run pkg-config zlib))
-
-(depends conf-pkg-config)
-
-(depexts zlib1g-dev)

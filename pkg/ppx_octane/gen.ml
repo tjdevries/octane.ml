@@ -83,12 +83,7 @@ let rec of_ast ~loc (ast : Ast.t) =
         let query = [%e query_expr] in
         let params = [%e params_expr] in
         Fmt.epr "query: %s@." query;
-        let result = Silo.query db ~query ~params ~deserializer:deserialize in
-        Stdlib.Result.map
-          (function
-            | Some list -> list
-            | None -> [])
-          result]
+        DBCaml.query db ~query ~params ~deserializer:deserialize]
     in
     let body =
       List.fold_right params.positional ~init:body ~f:(fun pos body ->

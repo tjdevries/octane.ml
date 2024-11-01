@@ -1,13 +1,4 @@
 (executable
- (package octane-testerino)
- (public_name octane_testerino)
- (name main)
- (modules main)
- (libraries octane oql fmt dbcaml silo dbcaml-driver-postgres riot serde core)
- (preprocess
-  (pps ppx_octane)))
-
-(executable
  (public_name oql_parse)
  (package octane)
  (name oql_parse)
@@ -31,12 +22,10 @@
   octane
   fmt
   bos
-  silo
-  dbcaml
-  dbcaml-driver-postgres
+  DBCaml
+  DBCamlSqlite
   riot
   serde
-  SerdeSqlite
   core)
  (preprocess
   (pps serde_derive ppx_octane)))

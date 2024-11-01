@@ -4,7 +4,7 @@ Pretty print the file
   $ ocamlformat ./lib/table-generated.ml
   module User = struct
     type t =
-      { id : int
+      { id : int [@primary_key { autoincrement = true }]
       ; name : string
       ; age : int
       }
@@ -85,6 +85,33 @@ Pretty print the file
       ;;
   
       let _ = serialize_t
+  
+      type row = t list [@@deriving serialize, deserialize]
+  
+      include struct
+        let _ = fun (_ : row) -> ()
+  
+        let serialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_row
+  
+        open! Serde
+  
+        let deserialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_row
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
       let relation = "users"
       let _ = relation
   
@@ -176,12 +203,42 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = Dbcaml.Params.Number id
+        let id id = DBCaml.Params.Number id
         let _ = id
-        let name name = Dbcaml.Params.String name
+        let name name = DBCaml.Params.String name
         let _ = name
-        let age age = Dbcaml.Params.Number age
+        let age age = DBCaml.Params.Number age
         let _ = age
+      end
+  
+      let insert db ~name ~age =
+        match
+          DBCaml.query
+            db
+            ~params:[ Params.name name; Params.age age ]
+            ~query:"INSERT INTO users (name, age) VALUES (?, ?) RETURNING *"
+            ~deserializer:deserialize_row
+        with
+        | Ok (t :: []) -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err
+      ;;
+  
+      let _ = insert
+  
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+  
+        let create db =
+          DBCaml.execute
+            db
+            ~params:[]
+            ~query:"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT , age INTEGER )"
+        ;;
+  
+        let _ = create
       end
   
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
@@ -302,7 +359,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result = Silo.query db ~query ~params ~deserializer:deserialize in
+      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -375,6 +432,33 @@ Pretty print the file
       ;;
   
       let _ = serialize_t
+  
+      type row = t list [@@deriving serialize, deserialize]
+  
+      include struct
+        let _ = fun (_ : row) -> ()
+  
+        let serialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_row
+  
+        open! Serde
+  
+        let deserialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_row
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
       let relation = "users"
       let _ = relation
   
@@ -410,8 +494,31 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = Dbcaml.Params.Number id
+        let id id = DBCaml.Params.Number id
         let _ = id
+      end
+  
+      let insert db ~id =
+        match
+          DBCaml.query
+            db
+            ~params:[ Params.id id ]
+            ~query:"INSERT INTO users (id) VALUES (?) RETURNING *"
+            ~deserializer:deserialize_row
+        with
+        | Ok (t :: []) -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err
+      ;;
+  
+      let _ = insert
+  
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER )"
+        let _ = create
       end
   
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
@@ -533,7 +640,7 @@ Pretty print the file
       in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
-      let result = Silo.query db ~query ~params ~deserializer:deserialize in
+      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -619,6 +726,33 @@ Pretty print the file
       ;;
   
       let _ = serialize_t
+  
+      type row = t list [@@deriving serialize, deserialize]
+  
+      include struct
+        let _ = fun (_ : row) -> ()
+  
+        let serialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_row
+  
+        open! Serde
+  
+        let deserialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_row
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
       let relation = "users"
       let _ = relation
   
@@ -682,10 +816,33 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = Dbcaml.Params.Number id
+        let id id = DBCaml.Params.Number id
         let _ = id
-        let name name = Dbcaml.Params.String name
+        let name name = DBCaml.Params.String name
         let _ = name
+      end
+  
+      let insert db ~id ~name =
+        match
+          DBCaml.query
+            db
+            ~params:[ Params.id id; Params.name name ]
+            ~query:"INSERT INTO users (id, name) VALUES (?, ?) RETURNING *"
+            ~deserializer:deserialize_row
+        with
+        | Ok (t :: []) -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err
+      ;;
+  
+      let _ = insert
+  
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER , name TEXT )"
+        let _ = create
       end
   
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
@@ -792,7 +949,7 @@ Pretty print the file
       in
       let params = [ p1; p2 ] in
       Fmt.epr "query: %s@." query;
-      let result = Silo.query db ~query ~params ~deserializer:deserialize in
+      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list
@@ -878,6 +1035,33 @@ Pretty print the file
       ;;
   
       let _ = serialize_t
+  
+      type row = t list [@@deriving serialize, deserialize]
+  
+      include struct
+        let _ = fun (_ : row) -> ()
+  
+        let serialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_row
+  
+        open! Serde
+  
+        let deserialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_row
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
       let relation = "users"
       let _ = relation
   
@@ -941,10 +1125,33 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = Dbcaml.Params.Number id
+        let id id = DBCaml.Params.Number id
         let _ = id
-        let name name = Dbcaml.Params.String name
+        let name name = DBCaml.Params.String name
         let _ = name
+      end
+  
+      let insert db ~id ~name =
+        match
+          DBCaml.query
+            db
+            ~params:[ Params.id id; Params.name name ]
+            ~query:"INSERT INTO users (id, name) VALUES (?, ?) RETURNING *"
+            ~deserializer:deserialize_row
+        with
+        | Ok (t :: []) -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err
+      ;;
+  
+      let _ = insert
+  
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER , name TEXT )"
+        let _ = create
       end
   
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
@@ -1034,6 +1241,33 @@ Pretty print the file
       ;;
   
       let _ = serialize_t
+  
+      type row = t list [@@deriving serialize, deserialize]
+  
+      include struct
+        let _ = fun (_ : row) -> ()
+  
+        let serialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_row
+  
+        open! Serde
+  
+        let deserialize_row =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_row
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
       let relation = "posts"
       let _ = relation
   
@@ -1125,12 +1359,39 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = Dbcaml.Params.Number id
+        let id id = DBCaml.Params.Number id
         let _ = id
         let author author = User.Params.id author
         let _ = author
-        let content content = Dbcaml.Params.String content
+        let content content = DBCaml.Params.String content
         let _ = content
+      end
+  
+      let insert db ~id ~author ~content =
+        match
+          DBCaml.query
+            db
+            ~params:[ Params.id id; Params.author author; Params.content content ]
+            ~query:"INSERT INTO posts (id, author, content) VALUES (?, ?, ?) RETURNING *"
+            ~deserializer:deserialize_row
+        with
+        | Ok (t :: []) -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err
+      ;;
+  
+      let _ = insert
+  
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS posts"
+        let _ = drop
+  
+        let create db =
+          DBCaml.execute db ~params:[] ~query:"CREATE TABLE posts (id INTEGER , author INTEGER , content TEXT )"
+        ;;
+  
+        let _ = create
       end
   
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
@@ -1274,7 +1535,7 @@ Pretty print the file
       in
       let params = [] in
       Fmt.epr "query: %s@." query;
-      let result = Silo.query db ~query ~params ~deserializer:deserialize in
+      let result = DBCaml.query db ~query ~params ~deserializer:deserialize in
       Stdlib.Result.map
         (function
           | Some list -> list

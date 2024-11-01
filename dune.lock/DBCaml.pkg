@@ -2,7 +2,7 @@
 
 (dune)
 
-(depends ocaml dune dbcaml serde serde_derive serde-postgres)
+(depends ocaml dune riot ppx_deriving serde uri)
 
 (source
  (fetch

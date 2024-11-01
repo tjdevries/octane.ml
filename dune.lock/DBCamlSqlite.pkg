@@ -2,7 +2,7 @@
 
 (dune)
 
-(depends ocaml dune sqlite3 serde silo serde_json serde_derive yojson)
+(depends ocaml dune DBCaml riot sqlite3 serde serde_json yojson)
 
 (source
  (fetch

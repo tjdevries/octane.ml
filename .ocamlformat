@@ -3,3 +3,4 @@ profile = janestreet
 margin = 80
 doc-comments-padding = 100
 exp-grouping = preserve
+break-string-literals = never

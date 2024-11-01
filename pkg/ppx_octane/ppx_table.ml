@@ -4,12 +4,80 @@ open Ast_builder
 
 let print_stuff name () =
   match Bos.OS.Dir.current (), name with
-  | Ok dir, Some name ->
-    Fmt.pr "current dir: %s // %s@." (Fpath.to_string dir) name
+  | Ok dir, name -> Fmt.pr "current dir: %s // %s@." (Fpath.to_string dir) name
   | _ -> Fmt.pr "cannot get current dir@."
 ;;
 
-let f payload =
+module FieldKind = struct
+  type t =
+    | PrimaryKey of { autoincrement : bool }
+    | Column
+  [@@deriving eq]
+end
+
+module TableField = struct
+  type t =
+    { label_declaration : label_declaration
+    ; loc : Location.t
+    ; name : string Loc.t
+    ; ty : core_type
+    ; kind : FieldKind.t
+    }
+
+  let make label_declaration =
+    let kind =
+      List.find_map label_declaration.pld_attributes ~f:(fun attr ->
+        match attr.attr_name.txt with
+        | "primary_key" -> Some (FieldKind.PrimaryKey { autoincrement = true })
+        | _ -> None)
+      |> Option.value ~default:FieldKind.Column
+    in
+    { label_declaration
+    ; loc = label_declaration.pld_loc
+    ; name = label_declaration.pld_name
+    ; ty = label_declaration.pld_type
+    ; kind
+    }
+  ;;
+
+  (* Iter helpers *)
+  let map (fields : t list) ~f = List.map ~f:(fun t -> f ~loc:t.loc t) fields
+
+  (* SQL Helpers *)
+  let create_field ~loc t =
+    let txt_to_sql = function
+      | "int" -> "INTEGER"
+      | "string" -> "TEXT"
+      | _ -> failwith "TODO: create_field - unknown type"
+    in
+    let column_type =
+      match t.ty with
+      | { ptyp_desc = Ptyp_constr ({ txt; _ }, []); _ } -> begin
+        match txt with
+        | Lident txt -> txt_to_sql txt
+        | Ldot (Ldot (Lident m, "Fields"), f) ->
+          (* let module_param = Gen.module_param ~loc m f in *)
+          (* [%expr [%e module_param] [%e ename]] *)
+          "INTEGER"
+        | _ -> failwith "TODO: create_field - unknown type"
+      end
+      | _ -> failwith "TODO: create_field - unknown type"
+    in
+    let column_attributes =
+      match t.kind with
+      | FieldKind.PrimaryKey { autoincrement = true } ->
+        "PRIMARY KEY AUTOINCREMENT"
+      | FieldKind.PrimaryKey { autoincrement = false } -> "PRIMARY KEY"
+      | FieldKind.Column -> ""
+    in
+    Format.sprintf "%s %s %s" t.name.txt column_type column_attributes
+  ;;
+
+  (* AST Helpers *)
+  let ename { loc; name; _ } = Default.evar ~loc name.txt
+end
+
+let make_fields_from_type payload =
   let checker =
     object
       inherit [label_declaration list] Ast_traverse.fold as super
@@ -18,15 +86,15 @@ let f payload =
         super#label_declaration ext (ext :: acc)
     end
   in
-  checker#type_declaration payload [] |> List.rev
+  checker#type_declaration payload [] |> List.rev |> List.map ~f:TableField.make
 ;;
 
 let args () = Deriving.Args.(empty +> arg "name" (estring __))
 
 let get_field_constructor ~loc ename pld_type =
   let match_lident = function
-    | "int" -> [%expr Dbcaml.Params.Number [%e ename]]
-    | "string" -> [%expr Dbcaml.Params.String [%e ename]]
+    | "int" -> [%expr DBCaml.Params.Number [%e ename]]
+    | "string" -> [%expr DBCaml.Params.String [%e ename]]
     | _ -> failwith "TODO: field_params - unknown builtin type"
   in
   match pld_type.ptyp_desc with
@@ -45,37 +113,90 @@ let get_field_constructor ~loc ename pld_type =
 let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   let type_declarations : type_declaration list = type_declarations in
   let ty = List.hd_exn type_declarations in
-  let names = f ty in
+  let fields = make_fields_from_type ty in
   let loc = Expansion_context.Deriver.derived_item_loc ctxt in
-  let ename =
+  let name =
     match name with
-    | Some name -> Default.estring ~loc name
+    | Some name -> name
     | None -> failwith "name is required"
   in
+  let ename = Default.estring ~loc name in
   let field_names =
-    List.map names ~f:(fun { pld_name; pld_type; pld_loc; _ } ->
-      let name = Default.ppat_var ~loc:pld_loc pld_name in
-      let str = Default.estring ~loc:pld_loc (Loc.txt pld_name) in
-      [%stri let [%p name] = [%e str]])
+    List.map fields ~f:(fun { loc; name; _ } ->
+      let pat = Default.ppat_var ~loc name in
+      let str = Default.estring ~loc name.txt in
+      [%stri let [%p pat] = [%e str]])
   in
   let field_types =
-    List.map names ~f:(fun { pld_name; pld_type; pld_loc; _ } ->
+    List.map fields ~f:(fun { loc; name; label_declaration; _ } ->
       let attrs =
-        [ Attr.make_deriving_attr ~loc:pld_loc [ "deserialize"; "serialize" ] ]
+        [ Attr.make_deriving_attr ~loc [ "deserialize"; "serialize" ] ]
       in
-      let type_decl = Ast_helper.Type.mk pld_name ~manifest:pld_type ~attrs in
+      let type_decl =
+        Ast_helper.Type.mk name ~manifest:label_declaration.pld_type ~attrs
+      in
       Ast_helper.Str.type_ Recursive [ type_decl ])
   in
   let field_params =
-    List.map names ~f:(fun { pld_name; pld_type; pld_loc; _ } ->
-      let name = Default.ppat_var ~loc:pld_loc pld_name in
-      let ename = Default.evar ~loc:pld_loc (Loc.txt pld_name) in
-      let param_name = Default.ppat_var ~loc:pld_loc pld_name in
-      let constructor = get_field_constructor ~loc ename pld_type in
-      [%stri let [%p param_name] = fun [%p name] -> [%e constructor]])
+    TableField.map fields ~f:(fun ~loc field ->
+      let pat = Default.ppat_var ~loc field.name in
+      let ename = TableField.ename field in
+      let param_name = Default.ppat_var ~loc field.name in
+      let constructor = get_field_constructor ~loc ename field.ty in
+      [%stri let [%p param_name] = fun [%p pat] -> [%e constructor]])
   in
   let field_module = Ast_helper.Mod.structure (field_names @ field_types) in
   let params_module = Ast_helper.Mod.structure field_params in
+  let insert =
+    let fields =
+      List.filter fields ~f:(fun field -> FieldKind.equal field.kind Column)
+    in
+    let params =
+      TableField.map fields ~f:(fun ~loc field ->
+        let ename = TableField.ename field in
+        let param_ident =
+          Loc.make ~loc (Ldot (Lident "Params", Loc.txt field.name))
+        in
+        let param = Default.pexp_ident ~loc param_ident in
+        [%expr [%e param] [%e ename]])
+      |> Default.elist ~loc
+    in
+    let columns =
+      TableField.map fields ~f:(fun ~loc field -> field.name.txt)
+      |> String.concat ~sep:", "
+    in
+    let placeholders =
+      List.map fields ~f:(fun _ -> "?") |> String.concat ~sep:", "
+    in
+    let query =
+      [%string
+        "INSERT INTO %{name} (%{columns}) VALUES (%{placeholders}) RETURNING *"]
+      |> Default.estring ~loc
+    in
+    let body =
+      [%expr
+        match
+          DBCaml.query
+            db
+            ~params:[%e params]
+            ~query:[%e query]
+            ~deserializer:deserialize_row
+        with
+        | Ok [ t ] -> Ok t
+        | Ok [] -> Error (`msg "empty: Should have returned one item")
+        | Ok _ -> Error (`msg "empty: Should not return more than one item")
+        | Error err -> Error err]
+    in
+    let body =
+      List.fold_right fields ~init:body ~f:(fun field acc ->
+        Gen.make_labelled_fun ~loc field.name.txt acc)
+    in
+    [%stri let insert db = [%e body]]
+    (* match result with *)
+    (* | Ok (Some [ t ]) -> Ok t *)
+    (* | Ok None -> Error "Should have returned an item" *)
+    (* | result -> result *)
+  in
   let deser =
     Serde_derive.De.generate_impl ~ctxt (_rec_flag, type_declarations)
   in
@@ -83,11 +204,28 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
     Serde_derive.Ser.generate_impl ~ctxt (_rec_flag, type_declarations)
   in
   if false then print_stuff name ();
+  let drop_query =
+    Default.estring ~loc [%string "DROP TABLE IF EXISTS %{name}"]
+  in
+  let create_query =
+    let columns =
+      TableField.map fields ~f:TableField.create_field
+      |> String.concat ~sep:", "
+    in
+    Default.estring ~loc [%string "CREATE TABLE %{name} (%{columns})"]
+  in
   deser
   @ ser
-  @ [ [%stri let relation = [%e ename]]
+  @ [ [%stri type row = t list [@@deriving serialize, deserialize]]
+    ; [%stri let relation = [%e ename]]
     ; [%stri module Fields = [%m field_module]]
     ; [%stri module Params = [%m params_module]]
+    ; insert
+    ; [%stri
+        module Table = struct
+          let drop db = DBCaml.execute db ~params:[] ~query:[%e drop_query]
+          let create db = DBCaml.execute db ~params:[] ~query:[%e create_query]
+        end]
     ; [%stri
         let () = Octane.TableRegistry.register { name = "test"; fields = [] }]
     ]

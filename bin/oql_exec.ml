@@ -7,9 +7,26 @@ open Logger.Make (struct
     let namespace = [ "bin"; "oql_run" ]
   end)
 
+(* primary key, autoincrement, default, not null *)
+
+(* let example db = User.insert ~name:"foo" ~phone_number:"123" db *)
+(* let example db = User.insert ~id:1 ~name:"foo" ~phone_number:"123" db *)
+(* let example db = User.insert' { name = "foo"; phone_number = "123" } db *)
+
+(* id must be passed, nothing special happens *)
+type _primary_key = { id : int [@primary_key] }
+
+(* id cannot be passed *)
+type _with_autoincrement = { id : int [@primary_key { autoincrement = true }] }
+
+(* it would be optional, but could be specified *)
+type _with_default =
+  { id : string [@primary_key { default = "uuid_generate_v1()" }] }
+
+(* KEKW JUST WRITE IT RAW FOR THAT SCENARIO *)
 module User = struct
   type t =
-    { id : int [@primary_key]
+    { id : int [@primary_key { autoincrement = true }]
     ; name : string
     ; phone_number : string
     }
@@ -28,7 +45,7 @@ end
 
 module Post = struct
   type t =
-    { id : int
+    { id : int [@primary_key { autoincrement = true }]
     ; author : User.Fields.id
     ; content : string
     }
@@ -52,28 +69,18 @@ let%query (module GetPost) =
 ;;
 
 let get_post_example db =
-  let* post = GetPost.query db ~user_id:1 in
-  List.iter post ~f:(fun { name; content; _ } ->
+  let* _ = Post.Table.drop db in
+  let* _ = Post.Table.create db in
+  let* post = Post.insert ~author:1 ~content:"Hello" db in
+  Fmt.pr "Inserted post: %d@." post.id;
+  let* posts = GetPost.query db ~user_id:1 in
+  List.iter posts ~f:(fun { name; content; _ } ->
     Fmt.pr "Post: %s - %s@." name content);
   Ok ()
 ;;
 
-(* generated_query_one db ~id deserialize *)
-let _generated_query_one db ~id deserialize =
-  let query = "" in
-  Fmt.epr "query: %s@." query;
-  Silo.query db ~params:[ Number id ] ~query ~deserializer:deserialize
-;;
-
-(* generated_query_two db ~id:(Number id) deserialize *)
-let _generated_query_two db ~id deserialize =
-  let query = "" in
-  Fmt.epr "query: %s@." query;
-  Silo.query db ~params:[ id ] ~query ~deserializer:deserialize
-;;
-
 let () =
-  Riot.run_with_status ~on_error:(fun x -> failwith x)
+  Riot.run_with_status ~on_error:(fun x -> failwith (DBCaml.Error.show x))
   @@ fun () ->
   let _ =
     match Logger.start () with
@@ -82,34 +89,26 @@ let () =
     | Error (`Application_error msg) -> failwith msg
     | Ok pid -> pid
   in
-  set_log_level (Some Logger.Trace);
+  set_log_level (Some Logger.Info);
   (* set_log_level (Some Logger.Trace); *)
   info (fun f -> f "Starting application");
   let* db =
     let config =
-      Silo.config
-        ~connections:2
-        ~driver:(module SerdeSqlite.Driver)
-        ~connection_string:
-          "postgresql://tjdevries:password@omen:5432/oql?sslmode=disable"
+      DBCaml.config
+        ~connector:(module DBCamlSqlite.Connector)
+        ~connections:1
+        ~connection_string:"./sqlite/test.db"
     in
-    match Silo.connect ~config with
+    match DBCaml.connect ~config with
     | Ok c -> Ok c
-    | Error e -> failwith ("connection:" ^ e)
+    | Error _ -> failwith "NO CONNECT"
   in
   info (fun f -> f "Finished connecting");
-  let _ =
-    Silo.query
-      db
-      ~params:[]
-      ~query:"SELECT * from users"
-      ~deserializer:UserName.deserialize
-  in
-  let users =
-    match UserName.query db with
-    | Ok one -> one
-    | Error e -> failwith e
-  in
+  let* _ = User.Table.drop db in
+  let* _ = User.Table.create db in
+  let* user = User.insert ~name:"teej_dv" ~phone_number:"1234567" db in
+  info (fun f -> f "Retrieved: %d - %s" user.id user.name);
+  let* users = UserName.query db in
   List.iter
     ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
     users;
