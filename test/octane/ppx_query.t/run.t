@@ -7,6 +7,7 @@ Pretty print the file
       { id : int [@primary_key { autoincrement = true }]
       ; name : string
       ; age : int
+      ; middle_name : string option
       }
     [@@deriving table { name = "users" }]
   
@@ -22,10 +23,11 @@ Pretty print the file
         let _ = ( let* ) in
         let open Serde.De in
         fun ctx ->
-          record ctx "t" 3 (fun ctx ->
+          record ctx "t" 4 (fun ctx ->
             let field_visitor =
               let visit_string _ctx str =
                 match str with
+                | "middle_name" -> Ok `middle_name
                 | "age" -> Ok `age
                 | "name" -> Ok `name
                 | "id" -> Ok `id
@@ -33,9 +35,10 @@ Pretty print the file
               in
               let visit_int _ctx str =
                 match str with
-                | 0 -> Ok `age
-                | 1 -> Ok `name
-                | 2 -> Ok `id
+                | 0 -> Ok `middle_name
+                | 1 -> Ok `age
+                | 2 -> Ok `name
+                | 3 -> Ok `id
                 | _ -> Ok `invalid_tag
               in
               Visitor.make ~visit_string ~visit_int ()
@@ -43,9 +46,14 @@ Pretty print the file
             let id = ref None in
             let name = ref None in
             let age = ref None in
+            let middle_name = ref None in
             let rec read_fields () =
               let* tag = next_field ctx field_visitor in
               match tag with
+              | Some `middle_name ->
+                let* v = field ctx "middle_name" (d (option string)) in
+                middle_name := Some v;
+                read_fields ()
               | Some `age ->
                 let* v = field ctx "age" int in
                 age := Some v;
@@ -67,7 +75,12 @@ Pretty print the file
             let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
             let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
             let* age = Stdlib.Option.to_result ~none:(`Msg "missing field \"age\" (\"age\")") !age in
-            Ok { age; name; id })
+            let middle_name =
+              match !middle_name with
+              | Some opt -> opt
+              | None -> None
+            in
+            Ok { middle_name; age; name; id })
       ;;
   
       let _ = deserialize_t
@@ -77,10 +90,11 @@ Pretty print the file
         let _ = ( let* ) in
         let open Serde.Ser in
         fun t ctx ->
-          record ctx "t" 3 (fun ctx ->
+          record ctx "t" 4 (fun ctx ->
             let* () = field ctx "id" (int t.id) in
             let* () = field ctx "name" (string t.name) in
             let* () = field ctx "age" (int t.age) in
+            let* () = field ctx "middle_name" ((s (option string)) t.middle_name) in
             Ok ())
       ;;
   
@@ -122,6 +136,8 @@ Pretty print the file
         let _ = name
         let age = "age"
         let _ = age
+        let middle_name = "middle_name"
+        let _ = middle_name
   
         type id = int [@@deriving deserialize, serialize]
   
@@ -200,23 +216,51 @@ Pretty print the file
   
           let _ = serialize_age
         end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+        type middle_name = string option [@@deriving deserialize, serialize]
+  
+        include struct
+          let _ = fun (_ : middle_name) -> ()
+  
+          open! Serde
+  
+          let deserialize_middle_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.De in
+            fun ctx -> (d (option string)) ctx
+          ;;
+  
+          let _ = deserialize_middle_name
+  
+          let serialize_middle_name =
+            let ( let* ) = Stdlib.Result.bind in
+            let _ = ( let* ) in
+            let open Serde.Ser in
+            fun t ctx -> (s (option string)) t ctx
+          ;;
+  
+          let _ = serialize_middle_name
+        end [@@ocaml.doc "@inline"] [@@merlin.hide]
       end
   
       module Params = struct
-        let id id = DBCaml.Params.Number id
+        let id id = DBCaml.Params.Values.integer id
         let _ = id
-        let name name = DBCaml.Params.String name
+        let name name = DBCaml.Params.Values.text name
         let _ = name
-        let age age = DBCaml.Params.Number age
+        let age age = DBCaml.Params.Values.integer age
         let _ = age
+        let middle_name middle_name = DBCaml.Params.Values.text_opt middle_name
+        let _ = middle_name
       end
   
-      let insert db ~name ~age =
+      let insert ~name ~age ?middle_name db =
         match
           DBCaml.query
             db
-            ~params:[ Params.name name; Params.age age ]
-            ~query:"INSERT INTO users (name, age) VALUES (?, ?) RETURNING *"
+            ~params:[ Params.name name; Params.age age; Params.middle_name middle_name ]
+            ~query:"INSERT INTO users (name, age, middle_name) VALUES (?, ?, ?) RETURNING *"
             ~deserializer:deserialize_row
         with
         | Ok (t :: []) -> Ok t
@@ -235,7 +279,9 @@ Pretty print the file
           DBCaml.execute
             db
             ~params:[]
-            ~query:"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT , age INTEGER )"
+            ~query:
+              "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, age INTEGER NOT NULL, \
+               middle_name TEXT ) strict"
         ;;
   
         let _ = create
@@ -357,6 +403,7 @@ Pretty print the file
              [ Stdlib.Format.sprintf "%s.%s" User.relation "id"; Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
           (String.concat ~sep:", " [ User.relation ])
       in
+      let open DBCaml.Params.Values in
       let params = [] in
       Fmt.epr "query: %s@." query;
       DBCaml.query db ~query ~params ~deserializer:deserialize
@@ -489,11 +536,11 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = DBCaml.Params.Number id
+        let id id = DBCaml.Params.Values.integer id
         let _ = id
       end
   
-      let insert db ~id =
+      let insert ~id db =
         match
           DBCaml.query
             db
@@ -512,7 +559,7 @@ Pretty print the file
       module Table = struct
         let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
         let _ = drop
-        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER )"
+        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL) strict"
         let _ = create
       end
   
@@ -633,6 +680,7 @@ Pretty print the file
           (String.concat ~sep:", " [ User.relation ])
           (Stdlib.Format.sprintf "(%s = %s)" (Stdlib.Format.sprintf "%s.%s" User.relation "id") "$1")
       in
+      let open DBCaml.Params.Values in
       let params = [ User.Params.id id ] in
       Fmt.epr "query: %s@." query;
       DBCaml.query db ~query ~params ~deserializer:deserialize
@@ -806,13 +854,13 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = DBCaml.Params.Number id
+        let id id = DBCaml.Params.Values.integer id
         let _ = id
-        let name name = DBCaml.Params.String name
+        let name name = DBCaml.Params.Values.text name
         let _ = name
       end
   
-      let insert db ~id ~name =
+      let insert ~id ~name db =
         match
           DBCaml.query
             db
@@ -831,7 +879,11 @@ Pretty print the file
       module Table = struct
         let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
         let _ = drop
-        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER , name TEXT )"
+  
+        let create db =
+          DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL, name TEXT NOT NULL) strict"
+        ;;
+  
         let _ = create
       end
   
@@ -937,6 +989,7 @@ Pretty print the file
           (String.concat ~sep:", " [ User.relation ])
           "TODO"
       in
+      let open DBCaml.Params.Values in
       let params = [ p1; p2 ] in
       Fmt.epr "query: %s@." query;
       DBCaml.query db ~query ~params ~deserializer:deserialize
@@ -1110,13 +1163,13 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = DBCaml.Params.Number id
+        let id id = DBCaml.Params.Values.integer id
         let _ = id
-        let name name = DBCaml.Params.String name
+        let name name = DBCaml.Params.Values.text name
         let _ = name
       end
   
-      let insert db ~id ~name =
+      let insert ~id ~name db =
         match
           DBCaml.query
             db
@@ -1135,7 +1188,11 @@ Pretty print the file
       module Table = struct
         let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
         let _ = drop
-        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER , name TEXT )"
+  
+        let create db =
+          DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL, name TEXT NOT NULL) strict"
+        ;;
+  
         let _ = create
       end
   
@@ -1344,15 +1401,15 @@ Pretty print the file
       end
   
       module Params = struct
-        let id id = DBCaml.Params.Number id
+        let id id = DBCaml.Params.Values.integer id
         let _ = id
         let author author = User.Params.id author
         let _ = author
-        let content content = DBCaml.Params.String content
+        let content content = DBCaml.Params.Values.text content
         let _ = content
       end
   
-      let insert db ~id ~author ~content =
+      let insert ~id ~author ~content db =
         match
           DBCaml.query
             db
@@ -1373,7 +1430,10 @@ Pretty print the file
         let _ = drop
   
         let create db =
-          DBCaml.execute db ~params:[] ~query:"CREATE TABLE posts (id INTEGER , author INTEGER , content TEXT )"
+          DBCaml.execute
+            db
+            ~params:[]
+            ~query:"CREATE TABLE posts (id INTEGER NOT NULL, author INTEGER NOT NULL, content TEXT NOT NULL) strict"
         ;;
   
         let _ = create
@@ -1518,6 +1578,7 @@ Pretty print the file
                        (Stdlib.Format.sprintf "%s.%s" Post.relation "author"))
                 ]))
       in
+      let open DBCaml.Params.Values in
       let params = [] in
       Fmt.epr "query: %s@." query;
       DBCaml.query db ~query ~params ~deserializer:deserialize

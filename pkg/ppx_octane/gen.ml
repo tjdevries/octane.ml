@@ -41,6 +41,18 @@ let make_labelled_fun ~loc arg body =
   Ast_builder.Default.pexp_fun ~loc (Labelled arg) None pattern body
 ;;
 
+let make_positional_fun ~loc arg body =
+  let arg_loc = Loc.make ~loc arg in
+  let pattern = Ast_builder.Default.ppat_var ~loc arg_loc in
+  Ast_builder.Default.pexp_fun ~loc Nolabel None pattern body
+;;
+
+let make_optional_fun ~loc arg body =
+  let arg_loc = Loc.make ~loc arg in
+  let pattern = Ast_builder.Default.ppat_var ~loc arg_loc in
+  Ast_builder.Default.pexp_fun ~loc (Optional arg) None pattern body
+;;
+
 let type_of_expression_to_generated_expression ~loc type_of_expr expr =
   let expr = Ast_builder.Default.evar ~loc expr in
   let open Ast in
@@ -76,11 +88,15 @@ let rec of_ast ~loc (ast : Ast.t) =
         type_of_expression_to_generated_expression ~loc type_constraint param)
     in
     let params_expr = Ast_builder.Default.elist ~loc paramslist in
+    (* let idk = Ast_builder.Default.pexp_open *)
+    (* let params_expr = Ast_builder.Default.pexp_open ~loc idk params_expr in *)
     (* let f = Ast_helper.Exp.fun_ in *)
     (* let arg_label *)
     let body =
       [%expr
         let query = [%e query_expr] in
+        (* TODO: change query to not be VALUES *)
+        let open DBCaml.Params.Values in
         let params = [%e params_expr] in
         Fmt.epr "query: %s@." query;
         DBCaml.query db ~query ~params ~deserializer:deserialize]

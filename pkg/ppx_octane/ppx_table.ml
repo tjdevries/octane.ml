@@ -1,12 +1,7 @@
 open Core
 open Ppxlib
 open Ast_builder
-
-let print_stuff name () =
-  match Bos.OS.Dir.current (), name with
-  | Ok dir, name -> Fmt.pr "current dir: %s // %s@." (Fpath.to_string dir) name
-  | _ -> Fmt.pr "cannot get current dir@."
-;;
+module Database = Drivers.Sqlite
 
 module FieldKind = struct
   type t =
@@ -50,25 +45,33 @@ module TableField = struct
       | "string" -> "TEXT"
       | _ -> failwith "TODO: create_field - unknown type"
     in
-    let column_type =
-      match t.ty with
+    let rec coretype_to_create_field ty =
+      match ty with
+      | [%type: [%t? core_type] option] ->
+        let _, field = coretype_to_create_field core_type in
+        true, field
       | { ptyp_desc = Ptyp_constr ({ txt; _ }, []); _ } -> begin
         match txt with
-        | Lident txt -> txt_to_sql txt
+        | Lident txt -> false, txt_to_sql txt
         | Ldot (Ldot (Lident m, "Fields"), f) ->
           (* let module_param = Gen.module_param ~loc m f in *)
           (* [%expr [%e module_param] [%e ename]] *)
-          "INTEGER"
+          false, "INTEGER"
         | _ -> failwith "TODO: create_field - unknown type"
       end
-      | _ -> failwith "TODO: create_field - unknown type"
+      (* | _ -> failwith "TODO: create_field - unknown type" *)
+      | _ -> Location.Error.raise (Location.Error.createf ~loc "Unknown type")
     in
+    let nullable, column_type = coretype_to_create_field t.ty in
     let column_attributes =
-      match t.kind with
-      | FieldKind.PrimaryKey { autoincrement = true } ->
+      match nullable, t.kind with
+      | _, FieldKind.PrimaryKey { autoincrement = true } ->
         "PRIMARY KEY AUTOINCREMENT"
-      | FieldKind.PrimaryKey { autoincrement = false } -> "PRIMARY KEY"
-      | FieldKind.Column -> ""
+      | false, FieldKind.PrimaryKey { autoincrement = false } ->
+        "PRIMARY KEY NOT NULL"
+      | false, FieldKind.Column -> "NOT NULL"
+      | true, FieldKind.PrimaryKey _ -> "PRIMARY KEY"
+      | true, FieldKind.Column -> ""
     in
     Format.sprintf "%s %s %s" t.name.txt column_type column_attributes
   ;;
@@ -92,22 +95,31 @@ let make_fields_from_type payload =
 let args () = Deriving.Args.(empty +> arg "name" (estring __))
 
 let get_field_constructor ~loc ename pld_type =
-  let match_lident = function
-    | "int" -> [%expr DBCaml.Params.Number [%e ename]]
-    | "string" -> [%expr DBCaml.Params.String [%e ename]]
-    | _ -> failwith "TODO: field_params - unknown builtin type"
+  let match_lident name optional =
+    match name, optional with
+    | "int", true -> [%expr DBCaml.Params.Values.integer_opt [%e ename]]
+    | "int", false -> [%expr DBCaml.Params.Values.integer [%e ename]]
+    | "string", true -> [%expr DBCaml.Params.Values.text_opt [%e ename]]
+    | "string", false -> [%expr DBCaml.Params.Values.text [%e ename]]
+    | lident, _ ->
+      Fmt.failwith "TODO: field_params - unknown builtin type: %s" lident
   in
-  match pld_type.ptyp_desc with
-  | Ptyp_constr ({ txt; _ }, []) -> begin
-    match txt with
-    | Lident ident -> match_lident ident
-    | Ldot (Ldot (Lident m, "Fields"), f) ->
-      let module_param = Gen.module_param ~loc m f in
-      [%expr [%e module_param] [%e ename]]
-    | Ldot _ -> failwith "TODO: unknown ldot"
-    | Lapply (_, _) -> failwith "TODO: Lapply"
-  end
-  | _ -> failwith "TODO: field_params"
+  let rec coretype_to_expr ty optional =
+    match ty.ptyp_desc with
+    | Ptyp_constr ({ txt = Lident "option"; _ }, [ core_type ]) ->
+      coretype_to_expr core_type true
+    | Ptyp_constr ({ txt; _ }, []) -> begin
+      match txt with
+      | Lident ident -> match_lident ident optional
+      | Ldot (Ldot (Lident m, "Fields"), f) ->
+        let module_param = Gen.module_param ~loc m f in
+        [%expr [%e module_param] [%e ename]]
+      | Ldot _ -> failwith "TODO: unknown ldot"
+      | Lapply (_, _) -> failwith "TODO: Lapply"
+    end
+    | _ -> failwith "TODO: field_params"
+  in
+  coretype_to_expr pld_type false
 ;;
 
 let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
@@ -187,15 +199,14 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
         | Ok _ -> Error (`msg "empty: Should not return more than one item")
         | Error err -> Error err]
     in
+    let body = Gen.make_positional_fun ~loc "db" body in
     let body =
       List.fold_right fields ~init:body ~f:(fun field acc ->
-        Gen.make_labelled_fun ~loc field.name.txt acc)
+        if String.(field.name.txt = "middle_name")
+        then Gen.make_optional_fun ~loc field.name.txt acc
+        else Gen.make_labelled_fun ~loc field.name.txt acc)
     in
-    [%stri let insert db = [%e body]]
-    (* match result with *)
-    (* | Ok (Some [ t ]) -> Ok t *)
-    (* | Ok None -> Error "Should have returned an item" *)
-    (* | result -> result *)
+    [%stri let insert = [%e body]]
   in
   let deser =
     Serde_derive.De.generate_impl ~ctxt (_rec_flag, type_declarations)
@@ -203,16 +214,13 @@ let generate_impl ~ctxt (_rec_flag, type_declarations) (name : string option) =
   let ser =
     Serde_derive.Ser.generate_impl ~ctxt (_rec_flag, type_declarations)
   in
-  if false then print_stuff name ();
-  let drop_query =
-    Default.estring ~loc [%string "DROP TABLE IF EXISTS %{name}"]
-  in
+  let drop_query = Default.estring ~loc (Database.drop_table ~name) in
   let create_query =
     let columns =
       TableField.map fields ~f:TableField.create_field
       |> String.concat ~sep:", "
     in
-    Default.estring ~loc [%string "CREATE TABLE %{name} (%{columns})"]
+    Default.estring ~loc (Database.create_table ~name ~columns)
   in
   deser
   @ ser

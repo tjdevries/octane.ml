@@ -1,6 +1,15 @@
 open Core
 open Riot
 
+(* module Constraints = struct *)
+(*   (* This is how you can extend the generated constraints *) *)
+(*   (* include Constraints *) *)
+(*   (* let table = [ *)
+  (*       PrimaryKey [ Fields.id ]; *)
+  (*       Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));" *)
+  (*     ] *) *)
+(* end *)
+
 let ( let* ) = Stdlib.Result.bind
 
 open Logger.Make (struct
@@ -23,24 +32,14 @@ type _with_autoincrement = { id : int [@primary_key { autoincrement = true }] }
 type _with_default =
   { id : string [@primary_key { default = "uuid_generate_v1()" }] }
 
-(* KEKW JUST WRITE IT RAW FOR THAT SCENARIO *)
 module User = struct
   type t =
     { id : int [@primary_key { autoincrement = true }]
     ; name : string
     ; phone_number : string
+    ; middle_name : string option
     }
   [@@deriving table { name = "users" }]
-
-  module Constraints = struct
-    (* This is how you can extend the generated constraints *)
-    (* include Constraints *)
-    (* let table = [
-        PrimaryKey [ Fields.id ];
-        Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));"
-      ] *)
-  
-  end
 end
 
 module Post = struct
@@ -52,13 +51,8 @@ module Post = struct
   [@@deriving table { name = "posts" }]
 end
 
-let%query (module UserName) = "SELECT User.id, User.name FROM User"
-
-let _example db =
-  let* users = UserName.query db in
-  List.iter users ~f:(fun { id; name } ->
-    Fmt.pr "@.We read this from the database: %d - %s@." id name);
-  Ok ()
+let%query (module UserName) =
+  "SELECT User.id, User.name, User.middle_name FROM User"
 ;;
 
 let%query (module GetPost) =
@@ -106,11 +100,19 @@ let () =
   info (fun f -> f "Finished connecting");
   let* _ = User.Table.drop db in
   let* _ = User.Table.create db in
-  let* user = User.insert ~name:"teej_dv" ~phone_number:"1234567" db in
+  let* user =
+    User.insert db ~name:"teej_dv" ~phone_number:"1234567" ~middle_name:"hi"
+    (* ?middle_name:(Some "hi") *)
+  in
   info (fun f -> f "Retrieved: %d - %s" user.id user.name);
   let* users = UserName.query db in
   List.iter
-    ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
+    ~f:(fun { id; name; middle_name } ->
+      Fmt.pr
+        "This is from riot: %d - %s | %s@."
+        id
+        name
+        (Option.value middle_name ~default:"<missing>"))
     users;
   let* _ = get_post_example db in
   Ok 1

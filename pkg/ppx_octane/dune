@@ -4,6 +4,8 @@
 ;  (libraries ppxlib)
 ;  (preprocess (pps ppxlib.metaquot ppx_combust)))
 
+(include_subdirs qualified)
+
 (library
  (name ppx_octane)
  (kind ppx_deriver)
