@@ -97,9 +97,6 @@ Pretty print the file
         let _ = deserialize_row
       end [@@ocaml.doc "@inline"] [@@merlin.hide]
   
-      let relation = "users"
-      let _ = relation
-  
       module Fields = struct
         let id = "id"
         let _ = id
@@ -136,6 +133,16 @@ Pretty print the file
         let _ = id
       end
   
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL) strict"
+        let _ = create
+      end
+  
+      let relation = "users"
+      let _ = relation
+  
       let insert ~id db =
         match
           DBCaml.query
@@ -151,14 +158,6 @@ Pretty print the file
       ;;
   
       let _ = insert
-  
-      module Table = struct
-        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
-        let _ = drop
-        let create db = DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL) strict"
-        let _ = create
-      end
-  
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
@@ -388,9 +387,6 @@ Pretty print the file
         let _ = deserialize_row
       end [@@ocaml.doc "@inline"] [@@merlin.hide]
   
-      let relation = "users"
-      let _ = relation
-  
       module Fields = struct
         let id = "id"
         let _ = id
@@ -457,6 +453,20 @@ Pretty print the file
         let _ = name
       end
   
+      module Table = struct
+        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
+        let _ = drop
+  
+        let create db =
+          DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL, name TEXT NOT NULL) strict"
+        ;;
+  
+        let _ = create
+      end
+  
+      let relation = "users"
+      let _ = relation
+  
       let insert ~id ~name db =
         match
           DBCaml.query
@@ -472,18 +482,6 @@ Pretty print the file
       ;;
   
       let _ = insert
-  
-      module Table = struct
-        let drop db = DBCaml.execute db ~params:[] ~query:"DROP TABLE IF EXISTS users"
-        let _ = drop
-  
-        let create db =
-          DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL, name TEXT NOT NULL) strict"
-        ;;
-  
-        let _ = create
-      end
-  
       let () = Octane.TableRegistry.register { name = "test"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end

@@ -152,6 +152,57 @@ let generate_params_module ~loc (fields : TableField.t list) =
   Ast_helper.Mod.structure field_params
 ;;
 
+let generate_insert_function ~loc name (fields : TableField.t list) =
+  let fields = List.filter fields ~f:(fun field -> FieldKind.equal field.kind Column) in
+  let params =
+    TableField.map fields ~f:(fun ~loc field ->
+      let ename = TableField.ename field in
+      let param_ident = Loc.make ~loc (Ldot (Lident "Params", Loc.txt field.name)) in
+      let param = Default.pexp_ident ~loc param_ident in
+      [%expr [%e param] [%e ename]])
+    |> Default.elist ~loc
+  in
+  let columns =
+    TableField.map fields ~f:(fun ~loc field -> field.name.txt) |> String.concat ~sep:", "
+  in
+  let placeholders = List.map fields ~f:(fun _ -> "?") |> String.concat ~sep:", " in
+  let query =
+    [%string "INSERT INTO %{name} (%{columns}) VALUES (%{placeholders}) RETURNING *"]
+    |> Default.estring ~loc
+  in
+  let body =
+    [%expr
+      match DBCaml.query db ~params:[%e params] ~query:[%e query] ~deserializer:deserialize_row with
+      | Ok [ t ] -> Ok t
+      | Ok [] -> Error (`msg "empty: Should have returned one item")
+      | Ok _ -> Error (`msg "empty: Should not return more than one item")
+      | Error err -> Error err]
+  in
+  let body = Gen.make_positional_fun ~loc "db" body in
+  List.fold_right fields ~init:body ~f:(fun field acc ->
+    if String.(field.name.txt = "middle_name")
+    then Gen.make_optional_fun ~loc field.name.txt acc
+    else Gen.make_labelled_fun ~loc field.name.txt acc)
+;;
+
+let generate_serializers ~ctxt type_declarations =
+  let deser = Serde_derive.De.generate_impl ~ctxt (Nonrecursive, type_declarations) in
+  let ser = Serde_derive.Ser.generate_impl ~ctxt (Nonrecursive, type_declarations) in
+  deser @ ser
+;;
+
+let generate_table_module ~loc name (fields : TableField.t list) =
+  let drop_query = Default.estring ~loc (Database.drop_table ~name) in
+  let create_query =
+    let columns = TableField.map fields ~f:TableField.create_field |> String.concat ~sep:", " in
+    Default.estring ~loc (Database.create_table ~name ~columns)
+  in
+  Ast_helper.Mod.structure
+    [ [%stri let drop db = DBCaml.execute db ~params:[] ~query:[%e drop_query]]
+    ; [%stri let create db = DBCaml.execute db ~params:[] ~query:[%e create_query]]
+    ]
+;;
+
 let generate_impl ~ctxt (_, (type_declarations : type_declaration list)) name =
   let loc = Expansion_context.Deriver.derived_item_loc ctxt in
   (* Name has to be passed, it's check in ppxlib *)
@@ -164,64 +215,18 @@ let generate_impl ~ctxt (_, (type_declarations : type_declaration list)) name =
   in
   let fields = make_fields_from_type ty in
   let ename = Default.estring ~loc name in
-  let insert =
-    let fields = List.filter fields ~f:(fun field -> FieldKind.equal field.kind Column) in
-    let params =
-      TableField.map fields ~f:(fun ~loc field ->
-        let ename = TableField.ename field in
-        let param_ident = Loc.make ~loc (Ldot (Lident "Params", Loc.txt field.name)) in
-        let param = Default.pexp_ident ~loc param_ident in
-        [%expr [%e param] [%e ename]])
-      |> Default.elist ~loc
-    in
-    let columns =
-      TableField.map fields ~f:(fun ~loc field -> field.name.txt) |> String.concat ~sep:", "
-    in
-    let placeholders = List.map fields ~f:(fun _ -> "?") |> String.concat ~sep:", " in
-    let query =
-      [%string "INSERT INTO %{name} (%{columns}) VALUES (%{placeholders}) RETURNING *"]
-      |> Default.estring ~loc
-    in
-    let body =
-      [%expr
-        match
-          DBCaml.query db ~params:[%e params] ~query:[%e query] ~deserializer:deserialize_row
-        with
-        | Ok [ t ] -> Ok t
-        | Ok [] -> Error (`msg "empty: Should have returned one item")
-        | Ok _ -> Error (`msg "empty: Should not return more than one item")
-        | Error err -> Error err]
-    in
-    let body = Gen.make_positional_fun ~loc "db" body in
-    let body =
-      List.fold_right fields ~init:body ~f:(fun field acc ->
-        if String.(field.name.txt = "middle_name")
-        then Gen.make_optional_fun ~loc field.name.txt acc
-        else Gen.make_labelled_fun ~loc field.name.txt acc)
-    in
-    [%stri let insert = [%e body]]
-  in
-  let deser = Serde_derive.De.generate_impl ~ctxt (Nonrecursive, type_declarations) in
-  let ser = Serde_derive.Ser.generate_impl ~ctxt (Nonrecursive, type_declarations) in
-  let drop_query = Default.estring ~loc (Database.drop_table ~name) in
-  let create_query =
-    let columns = TableField.map fields ~f:TableField.create_field |> String.concat ~sep:", " in
-    Default.estring ~loc (Database.create_table ~name ~columns)
-  in
+  let serializers = generate_serializers ~ctxt type_declarations in
   let field_module = generate_fields_module ~loc fields in
   let params_module = generate_params_module ~loc fields in
-  deser
-  @ ser
+  let table_module = generate_table_module ~loc name fields in
+  let insert_body = generate_insert_function ~loc name fields in
+  serializers
   @ [ [%stri type row = t list [@@deriving serialize, deserialize]]
-    ; [%stri let relation = [%e ename]]
     ; [%stri module Fields = [%m field_module]]
     ; [%stri module Params = [%m params_module]]
-    ; insert
-    ; [%stri
-        module Table = struct
-          let drop db = DBCaml.execute db ~params:[] ~query:[%e drop_query]
-          let create db = DBCaml.execute db ~params:[] ~query:[%e create_query]
-        end]
+    ; [%stri module Table = [%m table_module]]
+    ; [%stri let relation = [%e ename]]
+    ; [%stri let insert = [%e insert_body]]
     ; [%stri let () = Octane.TableRegistry.register { name = "test"; fields = [] }]
     ]
 ;;
