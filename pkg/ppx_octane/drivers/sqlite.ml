@@ -6,6 +6,12 @@ module T : Driver.DATABASE = struct
   ;;
 
   let drop_table ~name = [%string "DROP TABLE IF EXISTS %{name}"]
+
+  let coretype_to_sql = function
+    | "int" -> Some "INTEGER"
+    | "string" -> Some "TEXT"
+    | _ -> None
+  ;;
 end
 
 include T

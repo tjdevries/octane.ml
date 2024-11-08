@@ -98,7 +98,7 @@ let rec of_ast ~loc (ast : Ast.t) =
         (* TODO: change query to not be VALUES *)
         let open DBCaml.Params.Values in
         let params = [%e params_expr] in
-        Fmt.epr "query: %s@." query;
+        (* Fmt.epr "query: %s@." query; *)
         DBCaml.query db ~query ~params ~deserializer:deserialize]
     in
     let body =

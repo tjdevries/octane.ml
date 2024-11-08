@@ -1,42 +1,16 @@
 open Core
 open Riot
 
-(* module Constraints = struct *)
-(*   (* This is how you can extend the generated constraints *) *)
-(*   (* include Constraints *) *)
-(*   (* let table = [ *)
-  (*       PrimaryKey [ Fields.id ]; *)
-  (*       Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));" *)
-  (*     ] *) *)
-(* end *)
-
 let ( let* ) = Stdlib.Result.bind
 
 open Logger.Make (struct
     let namespace = [ "bin"; "oql_run" ]
   end)
 
-(* primary key, autoincrement, default, not null *)
-
-(* let example db = User.insert ~name:"foo" ~phone_number:"123" db *)
-(* let example db = User.insert ~id:1 ~name:"foo" ~phone_number:"123" db *)
-(* let example db = User.insert' { name = "foo"; phone_number = "123" } db *)
-
-(* id must be passed, nothing special happens *)
-type _primary_key = { id : int [@primary_key] }
-
-(* id cannot be passed *)
-type _with_autoincrement = { id : int [@primary_key { autoincrement = true }] }
-
-(* it would be optional, but could be specified *)
-type _with_default =
-  { id : string [@primary_key { default = "uuid_generate_v1()" }] }
-
 module User = struct
   type t =
     { id : int [@primary_key { autoincrement = true }]
     ; name : string
-    ; phone_number : string
     ; middle_name : string option
     }
   [@@deriving table { name = "users" }]
@@ -49,19 +23,45 @@ module Post = struct
     ; content : string
     }
   [@@deriving table { name = "posts" }]
-
-  (* ... could completely fake this ... *)
-  (* type%table x = *)
-  (*   { id : int *)
-  (*   ; author : int *)
-  (*   ; content : string *)
-  (*   } *)
 end
 
+(* Use the generated functions to control the database *)
+let setup_tables db =
+  (* Create User Tables *)
+  let* _ = User.Table.drop db in
+  let* _ = User.Table.create db in
+  (* Create Post Tables *)
+  let* _ = Post.Table.drop db in
+  let* _ = Post.Table.create db in
+  Ok ()
+;;
+
+(* Insert some records into the database *)
+let insert_examples db =
+  let* _ = User.insert db ~name:"ThePrimeagen" ~middle_name:"KEKW" in
+  let* user = User.insert db ~name:"teej_dv" ~middle_name:"lua" in
+  Fmt.pr "  User: id:%d, name:%s@." user.id user.name;
+  let* post = Post.insert ~author:user.id ~content:"Hello" db in
+  Fmt.pr "  Post: id:%d, user: %d@." post.id post.author;
+  Ok ()
+;;
+
+(* Select all users with their name and middle name *)
 let%query (module UserName) =
   "SELECT User.id, User.name, User.middle_name FROM User"
 ;;
 
+let user_table_example db =
+  let* users = UserName.query db in
+  List.iter
+    ~f:(fun { id; name; middle_name } ->
+      let middle_name = Option.value middle_name ~default:"<missing>" in
+      Fmt.pr "  UserName: id:%d, name:%s (%s)@." id name middle_name)
+    users;
+  Ok ()
+;;
+
+(* Select the user's name and all their posts *)
 let%query (module GetPost) =
   {| SELECT User.name, Post.author, Post.content
       FROM Post
@@ -69,14 +69,10 @@ let%query (module GetPost) =
         WHERE User.id = $user_id |}
 ;;
 
-let get_post_example db =
-  let* _ = Post.Table.drop db in
-  let* _ = Post.Table.create db in
-  let* post = Post.insert ~author:1 ~content:"Hello" db in
-  Fmt.pr "Inserted post: %d@." post.id;
-  let* posts = GetPost.query db ~user_id:1 in
+let post_table_example db ~user_id =
+  let* posts = GetPost.query db ~user_id in
   List.iter posts ~f:(fun { name; content; _ } ->
-    Fmt.pr "Post: %s - %s@." name content);
+    Fmt.pr "  GetPost : author:%s, content:%s@." name content);
   Ok ()
 ;;
 
@@ -90,7 +86,7 @@ let () =
     | Error (`Application_error msg) -> failwith msg
     | Ok pid -> pid
   in
-  set_log_level (Some Info);
+  set_log_level (Some Warn);
   info (fun f -> f "Starting application");
   let config =
     DBCaml.config
@@ -100,25 +96,11 @@ let () =
   in
   let* db = DBCaml.connect ~config in
   info (fun f -> f "Finished connecting");
-  let* _ = User.Table.drop db in
-  let* _ = User.Table.create db in
-  let* user =
-    User.insert
-      db
-      ~name:"teej_dv"
-      ~phone_number:"1234567"
-      ~middle_name:"This is an optional value"
-  in
-  info (fun f -> f "Retrieved: %d - %s" user.id user.name);
-  let* users = UserName.query db in
-  List.iter
-    ~f:(fun { id; name; middle_name } ->
-      Fmt.pr
-        "This is from riot: %d - %s | %s@."
-        id
-        name
-        (Option.value middle_name ~default:"<missing>"))
-    users;
-  let* _ = get_post_example db in
+  let* _ = setup_tables db in
+  Fmt.pr "==== CREATE ====@.";
+  let* _ = insert_examples db in
+  Fmt.pr "@.==== READ ====@.";
+  let* _ = user_table_example db in
+  let* _ = post_table_example db ~user_id:2 in
   Ok 1
 ;;
