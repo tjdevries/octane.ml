@@ -158,7 +158,7 @@ Pretty print the file
       ;;
   
       let _ = insert
-      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
+      let () = Octane.TableRegistry.register { name = "users"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   
@@ -482,7 +482,7 @@ Pretty print the file
       ;;
   
       let _ = insert
-      let () = Octane.TableRegistry.register { name = "test"; fields = [] }
+      let () = Octane.TableRegistry.register { name = "users"; fields = [] }
     end [@@ocaml.doc "@inline"] [@@merlin.hide]
   end
   

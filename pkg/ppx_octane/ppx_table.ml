@@ -227,7 +227,7 @@ let generate_impl ~ctxt (_, (type_declarations : type_declaration list)) name =
     ; [%stri module Table = [%m table_module]]
     ; [%stri let relation = [%e ename]]
     ; [%stri let insert = [%e insert_body]]
-    ; [%stri let () = Octane.TableRegistry.register { name = "test"; fields = [] }]
+    ; [%stri let () = Octane.TableRegistry.register { name = [%e ename]; fields = [] }]
     ]
 ;;
 
