@@ -202,8 +202,8 @@ and of_expression ~loc ~state (expression : Ast.expression) =
 and of_binary_expression ~loc ~state left op right =
   let open Oql.Ast in
   (* User.id = $id *)
-  (* left = User.id, Equal, right = $id *)
   (* let left = of_expression ~loc left in *)
+  (* left = User.id, Equal, right = $id *)
   (* let right = of_expression ~loc right in *)
   (* let op = of_bitop ~loc op in *)
   (* [%expr Stdlib.Format.sprintf "(%s %s %s)" [%e left] [%e op] [%e right]] *)
@@ -239,10 +239,14 @@ and of_bitop ~loc op =
 
 and of_model_field ~loc m =
   let open Ast in
+  (* let loc = ModelField.location m in *)
   let ident = Ldot (Lident (ModelField.model_name m), "relation") in
   let ident = Loc.make ~loc ident in
   let table = Ast_helper.Exp.ident ~loc ident in
-  let field = Ast_builder.Default.estring ~loc (ModelField.field_name m) in
+  let field = Ldot (Lident (ModelField.model_name m), "Fields") in
+  let field = Ldot (field, ModelField.field_name m) in
+  let field = Loc.make ~loc field in
+  let field = Ast_helper.Exp.ident ~loc field in
   [%expr Stdlib.Format.sprintf "%s.%s" [%e table] [%e field]]
 
 and of_column ~loc col =

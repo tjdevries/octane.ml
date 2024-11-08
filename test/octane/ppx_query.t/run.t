@@ -400,7 +400,9 @@ Pretty print the file
           "SELECT %s FROM %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"; Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.id
+             ; Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.name
+             ])
           (String.concat ~sep:", " [ User.relation ])
       in
       let open DBCaml.Params.Values in
@@ -676,9 +678,11 @@ Pretty print the file
           "SELECT %s FROM %s WHERE %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "id"; Stdlib.Format.sprintf "%s.%s" User.relation "name" ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.id
+             ; Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.name
+             ])
           (String.concat ~sep:", " [ User.relation ])
-          (Stdlib.Format.sprintf "(%s = %s)" (Stdlib.Format.sprintf "%s.%s" User.relation "id") "$1")
+          (Stdlib.Format.sprintf "(%s = %s)" (Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.id) "$1")
       in
       let open DBCaml.Params.Values in
       let params = [ User.Params.id id ] in
@@ -985,7 +989,7 @@ Pretty print the file
       let query =
         Stdlib.Format.sprintf
           "SELECT %s FROM %s WHERE %s"
-          (Stdlib.String.concat ", " [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; p2 ])
+          (Stdlib.String.concat ", " [ Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.name; p2 ])
           (String.concat ~sep:", " [ User.relation ])
           "TODO"
       in
@@ -1562,7 +1566,9 @@ Pretty print the file
           "SELECT %s FROM %s"
           (Stdlib.String.concat
              ", "
-             [ Stdlib.Format.sprintf "%s.%s" User.relation "name"; Stdlib.Format.sprintf "%s.%s" Post.relation "content" ])
+             [ Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.name
+             ; Stdlib.Format.sprintf "%s.%s" Post.relation Post.Fields.content
+             ])
           (Stdlib.Format.sprintf
              "%s %s"
              Post.relation
@@ -1574,8 +1580,8 @@ Pretty print the file
                     User.relation
                     (Stdlib.Format.sprintf
                        "(%s = %s)"
-                       (Stdlib.Format.sprintf "%s.%s" User.relation "id")
-                       (Stdlib.Format.sprintf "%s.%s" Post.relation "author"))
+                       (Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.id)
+                       (Stdlib.Format.sprintf "%s.%s" Post.relation Post.Fields.author))
                 ]))
       in
       let open DBCaml.Params.Values in
@@ -1585,6 +1591,142 @@ Pretty print the file
     ;;
   
     let raw = " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = Post.author "
+  end [@warning "-32"]
+  
+  module AuthorAndContent = struct
+    type t =
+      { name : User.Fields.name
+      ; content : Post.Fields.content
+      }
+    [@@deriving serialize, deserialize]
+  
+    include struct
+      let _ = fun (_ : t) -> ()
+  
+      let serialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.Ser in
+        fun t ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let* () = field ctx "name" ((s User.Fields.serialize_name) t.name) in
+            let* () = field ctx "content" ((s Post.Fields.serialize_content) t.content) in
+            Ok ())
+      ;;
+  
+      let _ = serialize_t
+  
+      open! Serde
+  
+      let deserialize_t =
+        let ( let* ) = Stdlib.Result.bind in
+        let _ = ( let* ) in
+        let open Serde.De in
+        fun ctx ->
+          record ctx "t" 2 (fun ctx ->
+            let field_visitor =
+              let visit_string _ctx str =
+                match str with
+                | "content" -> Ok `content
+                | "name" -> Ok `name
+                | _ -> Ok `invalid_tag
+              in
+              let visit_int _ctx str =
+                match str with
+                | 0 -> Ok `content
+                | 1 -> Ok `name
+                | _ -> Ok `invalid_tag
+              in
+              Visitor.make ~visit_string ~visit_int ()
+            in
+            let name = ref None in
+            let content = ref None in
+            let rec read_fields () =
+              let* tag = next_field ctx field_visitor in
+              match tag with
+              | Some `content ->
+                let* v = field ctx "content" (d Post.Fields.deserialize_content) in
+                content := Some v;
+                read_fields ()
+              | Some `name ->
+                let* v = field ctx "name" (d User.Fields.deserialize_name) in
+                name := Some v;
+                read_fields ()
+              | Some `invalid_tag ->
+                let* () = ignore_any ctx in
+                read_fields ()
+              | None -> Ok ()
+            in
+            let* () = read_fields () in
+            let* name = Stdlib.Option.to_result ~none:(`Msg "missing field \"name\" (\"name\")") !name in
+            let* content = Stdlib.Option.to_result ~none:(`Msg "missing field \"content\" (\"content\")") !content in
+            Ok { content; name })
+      ;;
+  
+      let _ = deserialize_t
+    end [@@ocaml.doc "@inline"] [@@merlin.hide]
+  
+    module Query = struct
+      type query = t list [@@deriving deserialize, serialize]
+  
+      include struct
+        let _ = fun (_ : query) -> ()
+  
+        open! Serde
+  
+        let deserialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.De in
+          fun ctx -> (d (list (d deserialize_t))) ctx
+        ;;
+  
+        let _ = deserialize_query
+  
+        let serialize_query =
+          let ( let* ) = Stdlib.Result.bind in
+          let _ = ( let* ) in
+          let open Serde.Ser in
+          fun t ctx -> (s (list (s serialize_t))) t ctx
+        ;;
+  
+        let _ = serialize_query
+      end [@@ocaml.doc "@inline"] [@@merlin.hide]
+    end
+  
+    let deserialize = Query.deserialize_query
+  
+    let query db =
+      let query =
+        Stdlib.Format.sprintf
+          "SELECT %s FROM %s"
+          (Stdlib.String.concat
+             ", "
+             [ Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.name
+             ; Stdlib.Format.sprintf "%s.%s" Post.relation Post.Fields.content
+             ])
+          (Stdlib.Format.sprintf
+             "%s %s"
+             Post.relation
+             (String.concat
+                ~sep:"\n"
+                [ Stdlib.Format.sprintf
+                    "%s %s ON %s"
+                    "INNER JOIN"
+                    User.relation
+                    (Stdlib.Format.sprintf
+                       "(%s = %s)"
+                       (Stdlib.Format.sprintf "%s.%s" User.relation User.Fields.id)
+                       (Stdlib.Format.sprintf "%s.%s" Post.relation Post.Fields.authorasdf))
+                ]))
+      in
+      let open DBCaml.Params.Values in
+      let params = [] in
+      Fmt.epr "query: %s@." query;
+      DBCaml.query db ~query ~params ~deserializer:deserialize
+    ;;
+  
+    let raw = " SELECT User.name, Post.content FROM Post INNER JOIN User ON User.id = Post.authorasdf "
   end [@warning "-32"]
 < language: ocaml
 

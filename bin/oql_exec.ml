@@ -49,6 +49,13 @@ module Post = struct
     ; content : string
     }
   [@@deriving table { name = "posts" }]
+
+  (* ... could completely fake this ... *)
+  (* type%table x = *)
+  (*   { id : int *)
+  (*   ; author : int *)
+  (*   ; content : string *)
+  (*   } *)
 end
 
 let%query (module UserName) =
@@ -83,26 +90,24 @@ let () =
     | Error (`Application_error msg) -> failwith msg
     | Ok pid -> pid
   in
-  set_log_level (Some Logger.Info);
-  (* set_log_level (Some Logger.Trace); *)
+  set_log_level (Some Info);
   info (fun f -> f "Starting application");
-  let* db =
-    let config =
-      DBCaml.config
-        ~connector:(module DBCamlSqlite.Connector)
-        ~connections:1
-        ~connection_string:"./sqlite/test.db"
-    in
-    match DBCaml.connect ~config with
-    | Ok c -> Ok c
-    | Error _ -> failwith "NO CONNECT"
+  let config =
+    DBCaml.config
+      ~connector:(module DBCamlSqlite.Connector)
+      ~connections:1
+      ~connection_string:"./sqlite/test.db"
   in
+  let* db = DBCaml.connect ~config in
   info (fun f -> f "Finished connecting");
   let* _ = User.Table.drop db in
   let* _ = User.Table.create db in
   let* user =
-    User.insert db ~name:"teej_dv" ~phone_number:"1234567" ~middle_name:"hi"
-    (* ?middle_name:(Some "hi") *)
+    User.insert
+      db
+      ~name:"teej_dv"
+      ~phone_number:"1234567"
+      ~middle_name:"This is an optional value"
   in
   info (fun f -> f "Retrieved: %d - %s" user.id user.name);
   let* users = UserName.query db in
