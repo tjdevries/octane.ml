@@ -47,9 +47,7 @@ let insert_examples db =
 ;;
 
 (* Select all users with their name and middle name *)
-let%query (module UserName) =
-  "SELECT User.id, User.name, User.middle_name FROM User"
-;;
+let%query (module UserName) = "SELECT User.id, User.name, User.middle_name FROM User"
 
 let user_table_example db =
   let* users = UserName.query db in
