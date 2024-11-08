@@ -52,20 +52,17 @@ module TableField = struct
   (* Iter helpers *)
   let map (fields : t list) ~f = List.map ~f:(fun t -> f ~loc:t.loc t) fields
 
-  let coretype_to_create_field ~loc ty =
-    let mapped =
-      match ty with
-      | { ptyp_desc = Ptyp_constr ({ txt; _ }, []); _ } -> begin
-        match txt with
-        | Lident txt -> Database.coretype_to_sql txt
-        | Ldot (Ldot (Lident m, "Fields"), f) -> Util.throw ~loc "create_field - ldot"
-        | _ -> Util.throw ~loc "TODO: create_field - unknown type"
-      end
-      | _ -> Util.throw ~loc "Unknown type: coretype_to_create_field"
-    in
-    match mapped with
-    | Some result -> result
-    | None -> Util.throw ~loc "TODO: create_field - unknown type"
+  let rec coretype_to_create_field ~loc = function
+    | [%type: [%t? core_type] option] -> coretype_to_create_field ~loc core_type
+    | { ptyp_desc = Ptyp_constr ({ txt; _ }, []); _ } -> begin
+      match txt with
+      | Lident txt -> Database.coretype_to_sql txt |> Option.value_exn
+      | Ldot (Ldot (Lident m, "Fields"), f) ->
+        (* Util.throw ~loc "create_field - ldot" *)
+        "INTEGER"
+      | _ -> Util.throw ~loc "TODO: create_field - unknown type"
+    end
+    | _ -> Util.throw ~loc "Unknown type: coretype_to_create_field"
   ;;
 
   (* SQL Helpers *)
@@ -179,10 +176,10 @@ let generate_insert_function ~loc name (fields : TableField.t list) =
       | Error err -> Error err]
   in
   let body = Gen.make_positional_fun ~loc "db" body in
-  List.fold_right fields ~init:body ~f:(fun field acc ->
-    if String.(field.name.txt = "middle_name")
-    then Gen.make_optional_fun ~loc field.name.txt acc
-    else Gen.make_labelled_fun ~loc field.name.txt acc)
+  List.fold_right fields ~init:body ~f:(fun { name; nullable; _ } acc ->
+    match nullable with
+    | true -> Gen.make_optional_fun ~loc name.txt acc
+    | false -> Gen.make_labelled_fun ~loc name.txt acc)
 ;;
 
 let generate_serializers ~ctxt type_declarations =
