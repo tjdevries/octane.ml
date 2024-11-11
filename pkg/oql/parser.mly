@@ -66,42 +66,41 @@ let name :=
   | name = NAME; { $startpos, $endpos, name }
 
 let query :=
-  | SELECT; ~ = select; from = from?; where = where?; SEMICOLON?; EOF;
-      { Select { select; from; where } }
+  | SELECT; ~ = select; ~ = from?; ~ = where?; SEMICOLON?; EOF; <Select>
 
 let select :=
   | result_kind = result_kind?; ~ = result_columns; { { result_kind; result_columns } }
 
 let result_kind :=
-  | DISTINCT; { Distinct }
-  | ALL; { All }
+  | DISTINCT; <Distinct>
+  | ALL; <All>
 
 let result_columns :=
-  | results = separated_nonempty_list(COMMA, result_column); { results }
+  | ~ = separated_nonempty_list(COMMA, result_column); <>
 
 let result_column :=
-  | STAR; { Star }
+  | STAR; <Star>
   | expression = expression; { Expression (expression, None) }
 
-let from := 
-  | FROM; relation = separated_nonempty_list(COMMA, table_or_subquery); { From relation }
-  | FROM; relation = table_or_subquery; stanzas = join_stanza+; { Join { relation; stanzas } }
+let from :=
+  | FROM; ~ = separated_nonempty_list(COMMA, table_or_subquery); <From>
+  | FROM; ~ = table_or_subquery; ~ = join_stanza+; <Join>
   (* | FROM;  *)
 
 let where :=
-  | WHERE; ~ = expression; { expression }
+  | WHERE; ~ = expression; <>
 
 let join_stanza :=
-  | ~ = join_operator; ~ = table_or_subquery; ~ = join_constraint; { join_operator, table_or_subquery, join_constraint }
+  | ~ = join_operator; ~ = table_or_subquery; ~ = join_constraint; <>
 
-let join_operator := 
+let join_operator :=
   | LEFT; OUTER; JOIN; { LeftOuter }
   | INNER; JOIN; { Inner }
   (* ... *)
 
 let join_constraint :=
-  | ON; ~ = expression; { On expression }
-  | USING; LPAR; column_names = separated_list(COMMA, column_name); RPAR; { Using column_names }
+  | ON; ~ = expression; <On>
+  | USING; LPAR; ~ = separated_list(COMMA, column_name); RPAR; <Using>
 
 let table_or_subquery :=
   | m = MODULE; { Model (Model.make ($startpos, $endpos, m)) }
@@ -111,10 +110,10 @@ let table_or_subquery :=
 let expression :=
   | ~ = number; <NumericLiteral>
   | ~ = string; <StringLiteral>
-  | NULL; { Null }
+  | NULL; <Null>
   | TRUE; { BooleanLiteral true }
   | FALSE; { BooleanLiteral false }
-  | column = column; { column }
+  | ~ = column; <>
   | ~ = BITSTRING; <BitString>
   (* | typecast *)
   | ~ = POSITIONAL_PARAM; <PositionalParam>
@@ -126,7 +125,7 @@ let expression :=
   | function_call
 
 let column_name :=
-  | ~ = name; { 
+  | ~ = name; {
     let field = Field.make name in
     Column.make None None field
   }
@@ -137,15 +136,15 @@ let field :=
     ModelField (ModelField.make m name)
   }
 
-let model := 
+let model :=
   | m = MODULE; { $startpos, $endpos, m }
 
 let column :=
-  | ~ = field; { field }
-  | ~ = schema; { schema }
-  | ~ = table; { table }
+  | ~ = field; <>
+  | ~ = schema; <>
+  | ~ = table; <>
 
-let schema := 
+let schema :=
   | schema = name; DOT; table = name; DOT; field = name; {
     let schema = Schema.make schema in
     let table = Table.make table in
@@ -153,57 +152,66 @@ let schema :=
     Column (Column.make (Some schema) (Some table) field)
   }
 
-let table := 
+let table :=
   | table = name; DOT; field = name; {
     let table = Table.make table in
     let field = Field.make field in
     Column (Column.make None (Some table) field)
   }
 
-let binop :=
-  | (left, right) = binoprule(PLUS); { BinaryExpression (left, Add, right) }
-  | (left, right) = binoprule(MINUS); { BinaryExpression (left, Sub, right) }
-  | (left, right) = binoprule(STAR); { BinaryExpression (left, Mul, right) }
-  | (left, right) = binoprule(SLASH); { BinaryExpression (left, Div, right) }
-  | (left, right) = binoprule(EQ); { BinaryExpression (left, Eq, right) }
-  | (left, right) = binoprule(GT); { BinaryExpression (left, Gt, right) }
-  | (left, right) = binoprule(GE); { BinaryExpression (left, Gt, right) }
-  | (left, right) = binoprule(LT); { BinaryExpression (left, Lt, right) }
-  | (left, right) = binoprule(LE); { BinaryExpression (left, Lte, right) }
-  | (left, right) = binoprule(PERCENT); { BinaryExpression (left, Mod, right) }
+let binopkind :=
+  | PLUS; <Add>
+  | MINUS; <Sub>
+  | STAR; <Mul>
+  | SLASH; <Div>
+  | EQ; <Eq>
+  | GT; <Gt>
+  | GE; <Ge>
+  | LT; <Lt>
+  | LE; <Lte>
+  | PERCENT; <Mod>
 
-let binoprule(middle) ==
-  | left = expression; _ = middle; right = expression; { left, right }
+let binop :=
+  | left = expression; ~ = binopkind; right = expression; <BinaryExpression>
+
+let unopkind :=
+  | MINUS; <Neg>
+  | PLUS; <Pos>
 
 let unop :=
-  | ~ = MINUS; ~ = expression; { UnaryExpression (Neg, expression) }
-  | ~ = PLUS; ~ = expression; { UnaryExpression (Pos, expression) }
+  | ~ = unopkind; ~ = expression; <UnaryExpression>
 
 let function_call :=
-  | ~ = func_name; args = delimited(LPAR, separated_list(COMMA, expression), RPAR); <FunctionCall>
+  | ~ = func_name; ~ = delimited(LPAR, separated_list(COMMA, expression), RPAR); <FunctionCall>
 
-let func_name := 
+let func_name :=
   | ~ = name; { FuncName.make name }
 
-let type_name := 
+(*
+let type_name :=
   | ~ = name; { TypeName.make name }
+*)
 
 let string :=
   | ~ = STRING; <SingleQuote>
 
-let number := 
+let number :=
   | ~ = INTEGER; <Integer>
   | ~ = NUMBER; <Numeric>
 
 (* https://www.postgresql.org/docs/current/sql-syntax-lexical.html#SQL-SYNTAX-CONSTANTS-GENERIC *)
-let typecast := 
+(*
+let typecast :=
   | ~ = type_name; ~ = string; <TypeCast>
   | ~ = string; DOUBLE_COLON; ~ = name; { TypeCast (TypeName.make name, string) }
   (* | CAST; LPAR; ~ = string; AS; ~ = identifier; RPAR; { TypeCast (identifier, string) } *)
+*)
 
+(*
 let index :=
   | ~ = expression; <Specific>
   | start = expression; COLON; stop = expression; { Slice (start, stop) }
+*)
 
 (* aggregate_name (expression [ , ... ] [ order_by_clause ] ) [ FILTER ( WHERE filter_clause ) ] *)
 (* aggregate_name (ALL expression [ , ... ] [ order_by_clause ] ) [ FILTER ( WHERE filter_clause ) ] *)
