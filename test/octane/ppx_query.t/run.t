@@ -955,7 +955,7 @@ Pretty print the file
   $ pp_query ./lib/foreign.ml | ocamlformat --impl -
   module User = struct
     type t =
-      { id : int
+      { id : int [@primary_key { autoincrement = true }]
       ; name : string
       }
     [@@deriving table { name = "users" }]
@@ -1124,7 +1124,10 @@ Pretty print the file
         let _ = drop
   
         let create db =
-          DBCaml.execute db ~params:[] ~query:"CREATE TABLE users (id INTEGER NOT NULL, name TEXT NOT NULL) strict"
+          DBCaml.execute
+            db
+            ~params:[]
+            ~query:"CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL) strict"
         ;;
   
         let _ = create
@@ -1133,12 +1136,12 @@ Pretty print the file
       let relation = "users"
       let _ = relation
   
-      let insert ~id ~name db =
+      let insert ~name db =
         match
           DBCaml.query
             db
-            ~params:[ Params.id id; Params.name name ]
-            ~query:"INSERT INTO users (id, name) VALUES (?, ?) RETURNING *"
+            ~params:[ Params.name name ]
+            ~query:"INSERT INTO users (name) VALUES (?) RETURNING *"
             ~deserializer:deserialize_row
         with
         | Ok (t :: []) -> Ok t
@@ -1154,8 +1157,8 @@ Pretty print the file
   
   module Post = struct
     type t =
-      { id : int
-      ; author : User.Fields.id
+      { id : int [@primary_key { autoincrement = true }]
+      ; user_id : int [@references User.id { on_delete = Cascade }]
       ; content : string
       }
     [@@deriving table { name = "posts" }]
@@ -1177,21 +1180,21 @@ Pretty print the file
               let visit_string _ctx str =
                 match str with
                 | "content" -> Ok `content
-                | "author" -> Ok `author
+                | "user_id" -> Ok `user_id
                 | "id" -> Ok `id
                 | _ -> Ok `invalid_tag
               in
               let visit_int _ctx str =
                 match str with
                 | 0 -> Ok `content
-                | 1 -> Ok `author
+                | 1 -> Ok `user_id
                 | 2 -> Ok `id
                 | _ -> Ok `invalid_tag
               in
               Visitor.make ~visit_string ~visit_int ()
             in
             let id = ref None in
-            let author = ref None in
+            let user_id = ref None in
             let content = ref None in
             let rec read_fields () =
               let* tag = next_field ctx field_visitor in
@@ -1200,9 +1203,9 @@ Pretty print the file
                 let* v = field ctx "content" string in
                 content := Some v;
                 read_fields ()
-              | Some `author ->
-                let* v = field ctx "author" (d User.Fields.deserialize_id) in
-                author := Some v;
+              | Some `user_id ->
+                let* v = field ctx "user_id" int in
+                user_id := Some v;
                 read_fields ()
               | Some `id ->
                 let* v = field ctx "id" int in
@@ -1215,9 +1218,9 @@ Pretty print the file
             in
             let* () = read_fields () in
             let* id = Stdlib.Option.to_result ~none:(`Msg "missing field \"id\" (\"id\")") !id in
-            let* author = Stdlib.Option.to_result ~none:(`Msg "missing field \"author\" (\"author\")") !author in
+            let* user_id = Stdlib.Option.to_result ~none:(`Msg "missing field \"user_id\" (\"user_id\")") !user_id in
             let* content = Stdlib.Option.to_result ~none:(`Msg "missing field \"content\" (\"content\")") !content in
-            Ok { content; author; id })
+            Ok { content; user_id; id })
       ;;
   
       let _ = deserialize_t
@@ -1229,7 +1232,7 @@ Pretty print the file
         fun t ctx ->
           record ctx "t" 3 (fun ctx ->
             let* () = field ctx "id" (int t.id) in
-            let* () = field ctx "author" ((s User.Fields.serialize_id) t.author) in
+            let* () = field ctx "user_id" (int t.user_id) in
             let* () = field ctx "content" (string t.content) in
             Ok ())
       ;;
@@ -1265,8 +1268,8 @@ Pretty print the file
       module Fields = struct
         let id = "id"
         let _ = id
-        let author = "author"
-        let _ = author
+        let user_id = "user_id"
+        let _ = user_id
         let content = "content"
         let _ = content
   
@@ -1296,30 +1299,30 @@ Pretty print the file
           let _ = serialize_id
         end [@@ocaml.doc "@inline"] [@@merlin.hide]
   
-        type author = User.Fields.id [@@deriving deserialize, serialize]
+        type user_id = int [@@deriving deserialize, serialize]
   
         include struct
-          let _ = fun (_ : author) -> ()
+          let _ = fun (_ : user_id) -> ()
   
           open! Serde
   
-          let deserialize_author =
+          let deserialize_user_id =
             let ( let* ) = Stdlib.Result.bind in
             let _ = ( let* ) in
             let open Serde.De in
-            fun ctx -> (d User.Fields.deserialize_id) ctx
+            fun ctx -> int ctx
           ;;
   
-          let _ = deserialize_author
+          let _ = deserialize_user_id
   
-          let serialize_author =
+          let serialize_user_id =
             let ( let* ) = Stdlib.Result.bind in
             let _ = ( let* ) in
             let open Serde.Ser in
-            fun t ctx -> (s User.Fields.serialize_id) t ctx
+            fun t ctx -> int t ctx
           ;;
   
-          let _ = serialize_author
+          let _ = serialize_user_id
         end [@@ocaml.doc "@inline"] [@@merlin.hide]
   
         type content = string [@@deriving deserialize, serialize]
@@ -1352,8 +1355,8 @@ Pretty print the file
       module Params = struct
         let id id = DBCaml.Params.Values.integer id
         let _ = id
-        let author author = User.Params.id author
-        let _ = author
+        let user_id user_id = DBCaml.Params.Values.integer user_id
+        let _ = user_id
         let content content = DBCaml.Params.Values.text content
         let _ = content
       end
@@ -1366,7 +1369,9 @@ Pretty print the file
           DBCaml.execute
             db
             ~params:[]
-            ~query:"CREATE TABLE posts (id INTEGER NOT NULL, author INTEGER NOT NULL, content TEXT NOT NULL) strict"
+            ~query:
+              "CREATE TABLE posts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users (id) ON DELETE \
+               CASCADE, content TEXT NOT NULL) strict"
         ;;
   
         let _ = create
@@ -1375,12 +1380,12 @@ Pretty print the file
       let relation = "posts"
       let _ = relation
   
-      let insert ~id ~author ~content db =
+      let insert ~content db =
         match
           DBCaml.query
             db
-            ~params:[ Params.id id; Params.author author; Params.content content ]
-            ~query:"INSERT INTO posts (id, author, content) VALUES (?, ?, ?) RETURNING *"
+            ~params:[ Params.content content ]
+            ~query:"INSERT INTO posts (content) VALUES (?) RETURNING *"
             ~deserializer:deserialize_row
         with
         | Ok (t :: []) -> Ok t

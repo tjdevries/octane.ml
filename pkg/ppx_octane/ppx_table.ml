@@ -12,8 +12,19 @@ end
 module FieldKind = struct
   type t =
     | PrimaryKey of { autoincrement : bool }
+    | ForeignKey of
+        { table : string
+        ; column : string
+        ; on_delete : string
+        }
     | Column
   [@@deriving eq]
+
+  let is_fillable = function
+    | PrimaryKey _ -> false
+    | ForeignKey _ -> true
+    | Column -> true
+  ;;
 end
 
 module TableField = struct
@@ -32,6 +43,8 @@ module TableField = struct
       List.find_map label_declaration.pld_attributes ~f:(fun attr ->
         match attr.attr_name.txt with
         | "primary_key" -> Some (FieldKind.PrimaryKey { autoincrement = true })
+        | "references" ->
+          Some (FieldKind.ForeignKey { table = "users"; column = "id"; on_delete = "CASCADE" })
         | _ -> None)
       |> Option.value ~default:FieldKind.Column
     in
@@ -67,16 +80,20 @@ module TableField = struct
 
   (* SQL Helpers *)
   let create_field ~loc t =
+    let name = t.name.txt in
     let column_type = coretype_to_create_field ~loc t.ty in
     let column_attributes =
       match t.nullable, t.kind with
       | _, FieldKind.PrimaryKey { autoincrement = true } -> "PRIMARY KEY AUTOINCREMENT"
       | false, FieldKind.PrimaryKey _ -> "PRIMARY KEY NOT NULL"
-      | false, FieldKind.Column -> "NOT NULL"
       | true, FieldKind.PrimaryKey _ -> "PRIMARY KEY"
+      | _, FieldKind.ForeignKey { table; column; on_delete } ->
+        (* [%string ", FOREIGN KEY (%{name}) REFERENCES %{table} (%{column}) ON DELETE %{on_delete}"] *)
+        [%string "REFERENCES %{table} (%{column}) ON DELETE %{on_delete}"]
+      | false, FieldKind.Column -> "NOT NULL"
       | true, FieldKind.Column -> ""
     in
-    Format.sprintf "%s %s %s" t.name.txt column_type column_attributes
+    Format.sprintf "%s %s %s" name column_type column_attributes
   ;;
 
   (* AST Helpers *)
@@ -150,7 +167,7 @@ let generate_params_module ~loc (fields : TableField.t list) =
 ;;
 
 let generate_insert_function ~loc name (fields : TableField.t list) =
-  let fields = List.filter fields ~f:(fun field -> FieldKind.equal field.kind Column) in
+  let fields = List.filter fields ~f:(fun field -> FieldKind.is_fillable field.kind) in
   let params =
     TableField.map fields ~f:(fun ~loc field ->
       let ename = TableField.ename field in

@@ -19,7 +19,7 @@ end
 module Post = struct
   type t =
     { id : int [@primary_key { autoincrement = true }]
-    ; author : User.Fields.id
+    ; user_id : int [@references User.id { on_delete = `cascade }]
     ; content : string
     }
   [@@deriving table { name = "posts" }]
@@ -41,8 +41,8 @@ let insert_examples db =
   let* _ = User.insert db ~name:"ThePrimeagen" ~middle_name:"KEKW" in
   let* user = User.insert db ~name:"teej_dv" ~middle_name:"lua" in
   Fmt.pr "  User: id:%d, name:%s@." user.id user.name;
-  let* post = Post.insert ~author:user.id ~content:"Hello" db in
-  Fmt.pr "  Post: id:%d, user: %d@." post.id post.author;
+  let* post = Post.insert ~user_id:user.id ~content:"Hello" db in
+  Fmt.pr "  Post: id:%d, user: %d@." post.id post.user_id;
   Ok ()
 ;;
 
@@ -61,9 +61,9 @@ let user_table_example db =
 
 (* Select the user's name and all their posts *)
 let%query (module GetPost) =
-  {| SELECT User.name, Post.author, Post.content
+  {| SELECT User.name, Post.user_id, Post.content
       FROM Post
-        INNER JOIN User ON User.id = Post.author
+        INNER JOIN User ON User.id = Post.user_id
         WHERE User.id = $user_id |}
 ;;
 
