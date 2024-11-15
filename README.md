@@ -32,3 +32,33 @@ let print_users db =
 ```
 
 There's more things too, but I haven't written those parts yet.
+
+
+# TODOs:
+- Table & SQL syntax generation needs to be provided by "Driver" for different SQL dialects.
+    - We have different stuff for SQlite vs Postgres
+
+
+### Random Thoughts
+
+```ocaml
+module Constraints = struct
+  (* This is how you can extend the generated constraints *)
+  (* include Constraints *)
+  (* let table = [
+        PrimaryKey [ Fields.id ];
+        Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));"
+      ] *)
+end
+
+(* id must be passed, nothing special happens *)
+type _primary_key = { id : int [@primary_key] }
+
+(* id cannot be passed *)
+type _with_autoincrement = { id : int [@primary_key { autoincrement = true }] }
+
+(* it would be optional, but could be specified *)
+type _with_default =
+  { id : string [@primary_key { default = "uuid_generate_v1()" }] }
+
+```

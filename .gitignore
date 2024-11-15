@@ -45,3 +45,6 @@ _esy/
 esy.lock/
 
 profile.dump
+
+*.db
+./sqlite/*

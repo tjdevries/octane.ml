@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml ppx_inline_test rio serde yojson dune)
+
+(source
+ (fetch
+  (url git+https://github.com/serde-ml/serde.git)))
+
+(dev)

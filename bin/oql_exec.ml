@@ -9,71 +9,73 @@ open Logger.Make (struct
 
 module User = struct
   type t =
-    { id : int [@primary_key]
+    { id : int [@primary_key { autoincrement = true }]
     ; name : string
-    ; phone_number : string
+    ; middle_name : string option
     }
   [@@deriving table { name = "users" }]
-
-  module Constraints = struct
-    (* This is how you can extend the generated constraints *)
-    (* include Constraints *)
-    (* let table = [
-        PrimaryKey [ Fields.id ];
-        Raw "ADD CONSTRAINT chk_users_status CHECK (status IN ('active', 'inactive', 'pending'));"
-      ] *)
-  
-  end
 end
 
 module Post = struct
   type t =
-    { id : int
-    ; author : User.Fields.id
+    { id : int [@primary_key { autoincrement = true }]
+    ; user_id : int [@references User.id { on_delete = `cascade }]
     ; content : string
     }
   [@@deriving table { name = "posts" }]
 end
 
-let%query (module UserName) = "SELECT User.id, User.name FROM User"
-
-let _example db =
-  let* users = UserName.query db in
-  List.iter users ~f:(fun { id; name } ->
-    Fmt.pr "@.We read this from the database: %d - %s@." id name);
+(* Use the generated functions to control the database *)
+let setup_tables db =
+  (* Create User Tables *)
+  let* _ = User.Table.drop db in
+  let* _ = User.Table.create db in
+  (* Create Post Tables *)
+  let* _ = Post.Table.drop db in
+  let* _ = Post.Table.create db in
   Ok ()
 ;;
 
+(* Insert some records into the database *)
+let insert_examples db =
+  let* _ = User.insert db ~name:"ThePrimeagen" ~middle_name:"KEKW" in
+  let* user = User.insert db ~name:"teej_dv" ~middle_name:"lua" in
+  Fmt.pr "  User: id:%d, name:%s@." user.id user.name;
+  let* post = Post.insert ~user_id:user.id ~content:"Hello" db in
+  Fmt.pr "  Post: id:%d, user: %d@." post.id post.user_id;
+  Ok ()
+;;
+
+(* Select all users with their name and middle name *)
+let%query (module UserName) = "SELECT User.id, User.name, User.middle_name FROM User"
+
+let user_table_example db =
+  let* users = UserName.query db in
+  List.iter
+    ~f:(fun { id; name; middle_name } ->
+      let middle_name = Option.value middle_name ~default:"<missing>" in
+      Fmt.pr "  UserName: id:%d, name:%s (%s)@." id name middle_name)
+    users;
+  Ok ()
+;;
+
+(* Select the user's name and all their posts *)
 let%query (module GetPost) =
-  {| SELECT User.name, Post.author, Post.content
+  {| SELECT User.name, Post.user_id, Post.content
       FROM Post
-        INNER JOIN User ON User.id = Post.author
+        INNER JOIN User ON User.id = Post.user_id
         WHERE User.id = $user_id |}
 ;;
 
-let get_post_example db =
-  let* post = GetPost.query db ~user_id:1 in
-  List.iter post ~f:(fun { name; content; _ } ->
-    Fmt.pr "Post: %s - %s@." name content);
+let post_table_example db ~user_id =
+  let* posts = GetPost.query db ~user_id in
+  List.iter posts ~f:(fun { name; content; _ } ->
+    Fmt.pr "  GetPost : author:%s, content:%s@." name content);
   Ok ()
 ;;
 
-(* generated_query_one db ~id deserialize *)
-let _generated_query_one db ~id deserialize =
-  let query = "" in
-  Fmt.epr "query: %s@." query;
-  Silo.query db ~params:[ Number id ] ~query ~deserializer:deserialize
-;;
-
-(* generated_query_two db ~id:(Number id) deserialize *)
-let _generated_query_two db ~id deserialize =
-  let query = "" in
-  Fmt.epr "query: %s@." query;
-  Silo.query db ~params:[ id ] ~query ~deserializer:deserialize
-;;
-
 let () =
-  Riot.run_with_status ~workers:2 ~on_error:(fun x -> failwith x)
+  Riot.run_with_status ~on_error:(fun x -> failwith (DBCaml.Error.show x))
   @@ fun () ->
   let _ =
     match Logger.start () with
@@ -82,28 +84,21 @@ let () =
     | Error (`Application_error msg) -> failwith msg
     | Ok pid -> pid
   in
-  (* set_log_level (Some Logger.Trace); *)
+  set_log_level (Some Warn);
   info (fun f -> f "Starting application");
-  let* db =
-    let config =
-      Silo.config
-        ~connections:2
-        ~driver:(module Dbcaml_driver_postgres)
-        ~connection_string:
-          "postgresql://tjdevries:password@localhosting:5432/oql?sslmode=disable"
-    in
-    match Silo.connect ~config with
-    | Ok c -> Ok c
-    | Error e -> failwith ("connection:" ^ e)
+  let config =
+    DBCaml.config
+      ~connector:(module DBCamlSqlite.Connector)
+      ~connections:1
+      ~connection_string:"./sqlite/test.db"
   in
-  let users =
-    match UserName.query db with
-    | Ok one -> one
-    | Error e -> failwith e
-  in
-  List.iter
-    ~f:(fun { id; name } -> Fmt.pr "This is from riot: %d - %s@." id name)
-    users;
-  let* _ = get_post_example db in
+  let* db = DBCaml.connect ~config in
+  info (fun f -> f "Finished connecting");
+  let* _ = setup_tables db in
+  Fmt.pr "==== CREATE ====@.";
+  let* _ = insert_examples db in
+  Fmt.pr "@.==== READ ====@.";
+  let* _ = user_table_example db in
+  let* _ = post_table_example db ~user_id:2 in
   Ok 1
 ;;

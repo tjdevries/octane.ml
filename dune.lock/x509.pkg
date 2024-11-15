@@ -1,4 +1,4 @@
-(version 1.0.4)
+(version 1.0.5)
 
 (build
  (progn
@@ -28,6 +28,6 @@
 (source
  (fetch
   (url
-   https://github.com/mirleft/ocaml-x509/releases/download/v1.0.4/x509-1.0.4.tbz)
+   https://github.com/mirleft/ocaml-x509/releases/download/v1.0.5/x509-1.0.5.tbz)
   (checksum
-   sha256=3e09d3983e53119d40cb0bfa9b07d595db7d0c5c9df06f5f2ac82a6258f5e702)))
+   sha256=efb09dbbe50e521ea2a9af34fcf28c1939bb6be9952254dcfd5294270c9a291b)))

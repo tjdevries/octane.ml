@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml dune DBCaml riot sqlite3 serde serde_json yojson)
+
+(source
+ (fetch
+  (url file:///home/tjdevries/git/dbcaml/)))
+
+(dev)

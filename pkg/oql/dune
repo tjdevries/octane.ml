@@ -1,7 +1,7 @@
 (library
  (name oql)
  (public_name oql)
- (libraries menhirLib fmt dbcaml ppxlib core)
+ (libraries menhirLib fmt DBCaml ppxlib core)
  (inline_tests)
  (preprocess
   (pps ppx_deriving.std ppx_jane)))

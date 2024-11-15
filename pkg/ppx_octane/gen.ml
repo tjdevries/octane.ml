@@ -41,6 +41,18 @@ let make_labelled_fun ~loc arg body =
   Ast_builder.Default.pexp_fun ~loc (Labelled arg) None pattern body
 ;;
 
+let make_positional_fun ~loc arg body =
+  let arg_loc = Loc.make ~loc arg in
+  let pattern = Ast_builder.Default.ppat_var ~loc arg_loc in
+  Ast_builder.Default.pexp_fun ~loc Nolabel None pattern body
+;;
+
+let make_optional_fun ~loc arg body =
+  let arg_loc = Loc.make ~loc arg in
+  let pattern = Ast_builder.Default.ppat_var ~loc arg_loc in
+  Ast_builder.Default.pexp_fun ~loc (Optional arg) None pattern body
+;;
+
 let type_of_expression_to_generated_expression ~loc type_of_expr expr =
   let expr = Ast_builder.Default.evar ~loc expr in
   let open Ast in
@@ -76,19 +88,18 @@ let rec of_ast ~loc (ast : Ast.t) =
         type_of_expression_to_generated_expression ~loc type_constraint param)
     in
     let params_expr = Ast_builder.Default.elist ~loc paramslist in
+    (* let idk = Ast_builder.Default.pexp_open *)
+    (* let params_expr = Ast_builder.Default.pexp_open ~loc idk params_expr in *)
     (* let f = Ast_helper.Exp.fun_ in *)
     (* let arg_label *)
     let body =
       [%expr
         let query = [%e query_expr] in
+        (* TODO: change query to not be VALUES *)
+        let open DBCaml.Params.Values in
         let params = [%e params_expr] in
-        Fmt.epr "query: %s@." query;
-        let result = Silo.query db ~query ~params ~deserializer:deserialize in
-        Stdlib.Result.map
-          (function
-            | Some list -> list
-            | None -> [])
-          result]
+        (* Fmt.epr "query: %s@." query; *)
+        DBCaml.query db ~query ~params ~deserializer:deserialize]
     in
     let body =
       List.fold_right params.positional ~init:body ~f:(fun pos body ->
@@ -191,8 +202,8 @@ and of_expression ~loc ~state (expression : Ast.expression) =
 and of_binary_expression ~loc ~state left op right =
   let open Oql.Ast in
   (* User.id = $id *)
-  (* left = User.id, Equal, right = $id *)
   (* let left = of_expression ~loc left in *)
+  (* left = User.id, Equal, right = $id *)
   (* let right = of_expression ~loc right in *)
   (* let op = of_bitop ~loc op in *)
   (* [%expr Stdlib.Format.sprintf "(%s %s %s)" [%e left] [%e op] [%e right]] *)
@@ -228,10 +239,14 @@ and of_bitop ~loc op =
 
 and of_model_field ~loc m =
   let open Ast in
+  (* let loc = ModelField.location m in *)
   let ident = Ldot (Lident (ModelField.model_name m), "relation") in
   let ident = Loc.make ~loc ident in
   let table = Ast_helper.Exp.ident ~loc ident in
-  let field = Ast_builder.Default.estring ~loc (ModelField.field_name m) in
+  let field = Ldot (Lident (ModelField.model_name m), "Fields") in
+  let field = Ldot (field, ModelField.field_name m) in
+  let field = Loc.make ~loc field in
+  let field = Ast_helper.Exp.ident ~loc field in
   [%expr Stdlib.Format.sprintf "%s.%s" [%e table] [%e field]]
 
 and of_column ~loc col =

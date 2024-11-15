@@ -1,0 +1,11 @@
+(version dev)
+
+(dune)
+
+(depends ocaml dune riot ppx_deriving serde uri)
+
+(source
+ (fetch
+  (url file:///home/tjdevries/git/dbcaml/)))
+
+(dev)
